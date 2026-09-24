@@ -75,8 +75,8 @@ export default function Hero({ onEnter }: { onEnter: () => void }) {
             when trading <span className="hero-mark">halts</span>
           </h1>
           <p className="hero-sub">
-            When Nasdaq halts a stock, the pools trading its token keep filling orders. Breaker is the
-            one call a venue adds before it settles, so a halted stock stops trading on chain too.
+            When Nasdaq halts a stock, pools trading its token keep filling orders. Breaker is one call
+            a venue adds so they stop too.
           </p>
           <div className="hero-actions">
             <button className="pill pill--solid" onClick={onEnter}>

@@ -15,15 +15,15 @@ const SOURCE = "https://github.com/jenzylove/breaker/blob/main/programs/referenc
 const DOES = [
   {
     title: "Checks for a halt",
-    body: "Reads the halt flag for this stock, which a publisher mirrors from the issuer. If the stock is halted, or the flag has not been refreshed recently enough to trust, the trade is refused.",
+    body: "Refuses the trade if the stock is halted, or if the halt feed has gone quiet.",
   },
   {
-    title: "Counts the trade against the daily limit",
-    body: "Adds it to today's total for the stock. The first trade that crosses the limit goes through and is flagged, as the SEC order allows. After that, any trade that would cross it is refused.",
+    title: "Counts it against the daily limit",
+    body: "Adds it to today's total and refuses a trade that would cross the limit a second time.",
   },
   {
-    title: "Publishes the trade in dollars",
-    body: "Writes the time, size, price and direction to the chain inside the same transaction. There is no separate reporting job that can fall behind or be switched off.",
+    title: "Publishes it in dollars",
+    body: "Writes time, size, price and direction to the chain, inside the same transaction.",
   },
 ];
 
@@ -177,19 +177,17 @@ export default function Adopt({ onRecorded }: { onRecorded: (signature: string) 
   return (
     <section className="section adopt-section" id="adopt">
       <div className="wrap">
-        <div className="section-head section-head--center">
-          <span className="beat">For venues</span>
+        <div className="section-head section-head--center" data-reveal>
+          <span className="beat">Demo</span>
           <h2>How an exchange plugs it in</h2>
           <p>
-            Breaker is not a site anyone trades on. It is a program on Solana that other trading
-            programs call. A pool adds one call to its swap, and from then on every trade has to pass
-            three checks before any token moves. Run it below: it is a real pool on Solana's test
-            network.
+            One call in the pool's swap. Flip it on or off, halt the stock, and run a real swap on
+            Solana's test network.
           </p>
         </div>
 
         <div className="adopt-grid">
-          <div className="adopt-copy">
+          <div className="adopt-copy" data-reveal>
             <h3 className="adopt-label">What that one call does</h3>
             <ol className="adopt-steps">
               {DOES.map((item, i) => (
@@ -202,21 +200,18 @@ export default function Adopt({ onRecorded }: { onRecorded: (signature: string) 
                 </li>
               ))}
             </ol>
-            <p className="adopt-revert">
-              If any check fails, the whole trade is cancelled. No token moves and nobody is filled at
-              a price the market has not set.
-            </p>
+            <p className="adopt-revert">Any failed check cancels the whole trade. Nothing moves.</p>
             <div className="adopt-proof-links">
-              <a className="link" href={`${SOURCE}#L69`} target="_blank" rel="noreferrer">
-                Ordinary swap source <ArrowUpRight size={13} />
+              <a className="link" href={`${SOURCE}#L69-L94`} target="_blank" rel="noreferrer">
+                The ordinary swap <ArrowUpRight size={13} />
               </a>
-              <a className="link" href={`${SOURCE}#L99`} target="_blank" rel="noreferrer">
-                Swap with Breaker source <ArrowUpRight size={13} />
+              <a className="link" href={`${SOURCE}#L118-L134`} target="_blank" rel="noreferrer">
+                The Breaker call <ArrowUpRight size={13} />
               </a>
             </div>
           </div>
 
-          <div className="ide">
+          <div className="ide" data-reveal="open">
             <div className="ide-head">
               <span className="ide-file">your_pool.rs</span>
               <div className="seg" role="group" aria-label="Breaker call">

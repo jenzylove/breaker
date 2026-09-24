@@ -75,32 +75,16 @@ export default function Coverage() {
   return (
     <section className="section coverage" id="coverage">
       <div className="wrap">
-        <div className="section-head section-head--center">
+        <div className="section-head section-head--center" data-reveal>
           <span className="beat">Coverage</span>
-          <h2>Every xStocks token on Solana, and whether it can trade right now</h2>
+          <h2>Every xStocks token, live</h2>
           <p>
-            Breaker works on any of them. This is the live status their issuer publishes,
-            read on every visit. When a stock is halted or its market is shut, the issuer itself
-            refuses to trade it. A liquidity pool keeps going. That gap is what Breaker closes.
+            The issuer's own status for all of them. When one is halted or closed, the issuer stops
+            trading it. Pools do not.
           </p>
         </div>
 
-        <div className="tally">
-          <div className="tally-cell">
-            <strong>{data ? data.total.toLocaleString() : "…"}</strong>
-            <span>tokenized stocks with a Solana mint</span>
-          </div>
-          <div className="tally-cell tally-cell--stop">
-            <strong>{data ? data.halted.toLocaleString() : "…"}</strong>
-            <span>halted by their issuer right now</span>
-          </div>
-          <div className="tally-cell tally-cell--idle">
-            <strong>{data ? data.closed.toLocaleString() : "…"}</strong>
-            <span>outside their market's hours</span>
-          </div>
-        </div>
-
-        <div className="ledger">
+        <div className="ledger" data-reveal>
           <div className="coverage-bar">
             <div className="coverage-search">
               <Search size={15} aria-hidden />

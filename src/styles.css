@@ -2995,3 +2995,301 @@ p.scope-note {
 .hero-body {
   padding-top: calc(var(--bar) + 96px);
 }
+
+/* ====================================================================== v6 */
+
+/* ---- header: full width, edge to edge. Transparent over the hero, a solid
+   bar with a hairline once the page moves. */
+.masthead,
+.masthead.masthead--solid {
+  top: 0;
+  padding: 0;
+  transition:
+    background 240ms ease,
+    border-color 240ms ease;
+  border-bottom: 1px solid transparent;
+}
+
+.masthead.masthead--solid {
+  background: color-mix(in srgb, var(--plane) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+  border-bottom-color: var(--grid);
+}
+
+.masthead-inner {
+  max-width: none;
+  height: 68px;
+  padding: 0 32px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .masthead-inner {
+    padding: 0 16px;
+  }
+}
+
+/* ---- hero: exactly one screen. The strip sits on the bottom edge, so
+   nothing of the next section shows until you scroll. */
+.hero {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 68px 0 0;
+}
+
+.hero-center {
+  margin: auto;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.hero-strip {
+  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  padding: 0 32px;
+}
+
+.hero-strip > div {
+  padding: 26px 20px 28px;
+}
+
+/* A short sequence on load: the note, the headline, the line, the actions,
+   then the evidence underneath. */
+.hero-center > *,
+.hero-strip {
+  animation: hero-in 900ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.hero-center > :nth-child(1) {
+  animation-delay: 60ms;
+}
+.hero-center > :nth-child(2) {
+  animation-delay: 160ms;
+}
+.hero-center > :nth-child(3) {
+  animation-delay: 300ms;
+}
+.hero-center > :nth-child(4) {
+  animation-delay: 420ms;
+}
+.hero-strip {
+  animation-delay: 560ms;
+}
+
+/* The highlight lands a beat after the headline. */
+.hero-mark {
+  animation: mark-in 700ms cubic-bezier(0.34, 1.4, 0.64, 1) 520ms both;
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes mark-in {
+  from {
+    opacity: 0;
+    transform: rotate(4deg) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-1.5deg) scale(1);
+  }
+}
+
+/* ---- scroll reveal. Fallback first: a class the observer adds. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(34px);
+  transition:
+    opacity 900ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+[data-reveal="open"] {
+  transform: translateY(40px) scale(0.94);
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Where supported, the entrance is tied to scroll position itself, so each
+   block opens as it travels up the screen and closes if you scroll back. */
+@supports (animation-timeline: view()) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: reveal-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 32%;
+  }
+
+  [data-reveal="open"] {
+    animation-name: reveal-open;
+    animation-range: entry 0% cover 40%;
+  }
+
+  @keyframes reveal-rise {
+    from {
+      opacity: 0;
+      transform: translateY(46px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes reveal-open {
+    from {
+      opacity: 0.2;
+      transform: translateY(60px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* The line between steps draws down as you scroll past each one. */
+  .rule {
+    view-timeline-name: --rule;
+  }
+
+  .rules .rule:not(:last-child)::before {
+    animation: line-grow linear both;
+    animation-timeline: --rule;
+    animation-range: cover 18% cover 55%;
+  }
+
+  @keyframes line-grow {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+}
+
+/* The old one-shot rule animation is replaced by the reveal above. */
+.rule,
+.rules.is-in .rule {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.rule[data-reveal] {
+  opacity: 0;
+  transform: translateY(34px);
+}
+
+.rule[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@supports (animation-timeline: view()) {
+  .rule[data-reveal] {
+    opacity: 1;
+    transform: none;
+    animation: reveal-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 32%;
+  }
+}
+
+.rule-dot,
+.rules.is-in .rule-dot {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.rule:not(:last-child)::before {
+  transform: scaleY(1);
+  transform-origin: top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  .rule[data-reveal],
+  .hero-center > *,
+  .hero-strip,
+  .hero-mark,
+  .rules .rule:not(:last-child)::before {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-mark {
+    transform: rotate(-1.5deg) !important;
+  }
+}
+
+/* ---- why: more air between the steps */
+.rules {
+  display: grid;
+  gap: 18px;
+}
+
+.rule-body p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.rule-answer {
+  margin-top: 16px !important;
+}
+
+p.scope-note {
+  margin-top: 56px;
+}
+
+/* ---- demo right under the hero */
+.adopt-section {
+  padding-top: 110px;
+  padding-bottom: 110px;
+}
+
+/* ---- footer: links stacked, filling the right side */
+.site-footer-links {
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 6px;
+  min-width: 220px;
+}
+
+.site-footer-links a {
+  font-size: 16px;
+}
+
+.site-footer-brand p {
+  max-width: 46ch;
+}

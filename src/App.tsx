@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpRight, Moon, Sun } from "lucide-react";
 import Hero from "./Hero";
 import Coverage from "./Coverage";
@@ -9,30 +9,9 @@ import type { TapeEntry } from "./lib/tape";
 const EXPLORER = (kind: "address" | "tx", id: string) =>
   `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
 
-/** Adds `is-in` once the element scrolls into view, then stops watching. */
-function useInView<T extends HTMLElement>(rootMargin = "0px 0px -12% 0px") {
-  const ref = useRef<T>(null);
-  const [inView, setInView] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || typeof IntersectionObserver === "undefined") {
-      setInView(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [rootMargin]);
-  return { ref, inView };
-}
+const REPO = "https://github.com/jenzylove/breaker";
+const ORDER_URL =
+  "https://www.federalregister.gov/documents/2026/09/22/2026-19388/order-granting-temporary-conditional-exemptive-relief-pursuant-to-section-36a1-of-the-securities";
 
 /** Dark unless the visitor switches. index.html stamps the same default so the
  *  first paint is already dark. */
@@ -44,68 +23,77 @@ function useTheme() {
   return { theme, toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")) };
 }
 
-const REPO = "https://github.com/jenzylove/breaker";
-const ORDER_URL =
-  "https://www.federalregister.gov/documents/2026/09/22/2026-19388/order-granting-temporary-conditional-exemptive-relief-pursuant-to-section-36a1-of-the-securities";
+/**
+ * Scroll motion. Where the browser supports scroll driven animation, CSS ties
+ * each [data-reveal] element's entrance to its position in the viewport, so it
+ * opens as you scroll rather than playing once. Elsewhere, this falls back to
+ * adding `is-in` when the element arrives.
+ */
+function useReveal() {
+  useEffect(() => {
+    if (typeof CSS !== "undefined" && CSS.supports?.("animation-timeline: view()")) return;
+    if (typeof IntersectionObserver === "undefined") {
+      document.querySelectorAll("[data-reveal]").forEach((el) => el.classList.add("is-in"));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            io.unobserve(entry.target);
+          }
+        }),
+      { rootMargin: "0px 0px -10% 0px" },
+    );
+    const watch = () =>
+      document.querySelectorAll("[data-reveal]:not(.is-in)").forEach((el) => io.observe(el));
+    watch();
+    // Sections that render after their data arrives still get observed.
+    const mo = new MutationObserver(watch);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
+  }, []);
+}
 
-
-// Each rule says what the order requires and why a pool fails it, then what
-// Breaker does about it. The intro already says a pool cannot meet these, so
-// the failure is not relabelled on every step.
 const RULES = [
   {
     title: "Stop when the exchange stops",
     plain:
-      "If Nasdaq halts a stock, every venue trading its token has to halt it too, at the same moment. The issuer's halt does not reach the chain on its own: on 24 September, none of the seven stocks xStocks had halted was paused on Solana, so their tokens could still be traded anywhere.",
-    breaker: "Breaker refuses the trade while the stock is halted, and also if the halt feed goes quiet.",
+      "When Nasdaq halts a stock, every venue must halt its token too. The issuer's halt never reaches the chain: none of the seven stocks xStocks had halted on 24 September was paused on Solana.",
+    breaker: "Breaker refuses the trade while the stock is halted, or if the halt feed goes quiet.",
   },
   {
     title: "Stay under a daily limit",
     plain:
-      "A venue may only trade a small slice of what the stock normally trades in a day. Go over twice and that stock is frozen for three months. A pool does not count its own volume and has no idea what the limit is.",
-    breaker: "Breaker counts every trade and refuses the one that would cross the limit a second time.",
+      "A venue may only trade a small share of a stock's normal daily volume. A pool does not count its volume at all.",
+    breaker: "Breaker counts every trade and refuses the one that would cross the limit twice.",
   },
   {
     title: "Publish every trade",
-    plain:
-      "Every trade has to be public within ten minutes, in dollars, with its time, size and direction. A pool only emits raw token amounts.",
-    breaker: "Breaker writes that record inside the trade itself, so it cannot be skipped.",
+    plain: "Every trade must be public in dollars within ten minutes. A pool only emits token amounts.",
+    breaker: "Breaker writes the record inside the trade, so it cannot be skipped.",
   },
 ];
-
-function Rules() {
-  const { ref, inView } = useInView<HTMLOListElement>();
-  return (
-    <ol ref={ref} className={`rules ${inView ? "is-in" : ""}`}>
-      {RULES.map((rule, i) => (
-        <li className="rule" key={rule.title} style={{ ["--i" as string]: i }}>
-          <span className="rule-dot" aria-hidden />
-          <div className="rule-body">
-            <h3>{rule.title}</h3>
-            <p>{rule.plain}</p>
-            <p className="rule-answer">{rule.breaker}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 export default function App() {
   const { theme, toggle } = useTheme();
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
   const [tapeUnread, setTapeUnread] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  useReveal();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.72);
+    const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // `fresh` skips the browser's short cache, for the reload right after an
-  // order so the visitor's own trade shows up.
+  // `fresh` skips the browser's short cache, for the reload right after a swap.
   const loadTape = (fresh = false): Promise<TapeEntry[]> =>
     fetch(`/api/tape?limit=40${fresh ? `&t=${Date.now()}` : ""}`)
       .then((r) => r.json())
@@ -163,9 +151,9 @@ export default function App() {
             Breaker
           </span>
           <nav className="masthead-nav">
+            <a href="#adopt">Demo</a>
             <a href="#why">Why</a>
             <a href="#coverage">Coverage</a>
-            <a href="#adopt">For venues</a>
             <a href="#record">Record</a>
           </nav>
           <div className="masthead-meta">
@@ -181,62 +169,52 @@ export default function App() {
 
       <Hero onEnter={toDemo} />
 
+      <Adopt onRecorded={onRecorded} />
+
       <section className="section" id="why">
         <div className="wrap wrap--narrow">
-          <div className="section-head section-head--center">
+          <div className="section-head section-head--center" data-reveal>
             <span className="beat">Why</span>
             <h2>Why a stock token needs a brake</h2>
             <p>
-              On 17 September the SEC granted conditional relief letting real US stocks trade on
-              public blockchains for five years. The order sets a long list of conditions. These are
-              the three a liquidity pool cannot meet on its own.
+              The SEC now lets US stocks trade on chain, under conditions. Three of them a
+              liquidity pool cannot meet alone.
             </p>
           </div>
 
-          <Rules />
+          <ol className="rules">
+            {RULES.map((rule) => (
+              <li className="rule" key={rule.title} data-reveal>
+                <span className="rule-dot" aria-hidden />
+                <div className="rule-body">
+                  <h3>{rule.title}</h3>
+                  <p>{rule.plain}</p>
+                  <p className="rule-answer">{rule.breaker}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
 
-          <p className="rules-foot">
-            Breaker is the check that sits in front of the pool. Before a trade settles, the pool
-            asks it. If the stock is halted or the limit is gone, the whole trade is cancelled and
-            nothing moves.
-          </p>
-
-          <p className="scope-note">
-            <strong>What this does not do.</strong> The order also requires permissioned access,
-            issuer objection rights, published venue contracts, participant notices, OFAC
-            compliance and recordkeeping. Breaker implements none of those, and running it does not
-            make anyone a Tokenized Securities Venue. This is a testnet build of three controls, not
-            a compliance product.{" "}
-            <a
-              href={ORDER_URL}
-              target="_blank"
-              rel="noreferrer"
-            >
+          <p className="scope-note" data-reveal>
+            Breaker covers these three conditions, not the rest of the order: access controls,
+            issuer objections, OFAC and recordkeeping stay with the venue. Testnet, not audited.{" "}
+            <a href={ORDER_URL} target="_blank" rel="noreferrer">
               Read the order
             </a>
-            .
           </p>
         </div>
       </section>
 
       <Coverage />
 
-
-      <Adopt onRecorded={onRecorded} />
-
       <section className="section" id="record">
         <div className="wrap">
-          <div className="section-head section-head--center">
-            <span className="beat">The public record</span>
-            <h2>Every trade it lets through is published</h2>
-            <p>
-              The SEC order requires every trade to be made public within ten minutes, in dollars,
-              with its time, size and direction. Breaker writes that record inside the trade itself,
-              so a venue cannot skip it. This table is read straight from the blockchain, not from
-              our server. Run a swap above with the stock open and it lands here.
-            </p>
+          <div className="section-head section-head--center" data-reveal>
+            <span className="beat">Record</span>
+            <h2>Every trade it lets through, published</h2>
+            <p>In dollars, read straight from the chain, not from our server.</p>
           </div>
-          <div className="ledger">
+          <div className="ledger" data-reveal>
             <div className="ledger-head">
               <span>Trades that cleared Breaker</span>
               {tape && tape.length > 0 ? (
@@ -302,7 +280,8 @@ export default function App() {
             <div className="site-footer-brand">
               <span className="site-footer-mark">Breaker</span>
               <p>
-                The check tokenized stock venues on Solana call before they settle a trade.
+                Halt protection for tokenized stocks on Solana. One call a trading venue adds, so
+                halted stocks stop trading, daily limits hold, and every trade is published.
               </p>
             </div>
             <nav className="site-footer-links" aria-label="Project">
@@ -311,6 +290,9 @@ export default function App() {
               </a>
               <a href={`${REPO}#add-breaker-to-a-venue`} target="_blank" rel="noreferrer">
                 Integration guide
+              </a>
+              <a href={EXPLORER("address", venueConfig.breaker)} target="_blank" rel="noreferrer">
+                The program on Solana
               </a>
               <a href={ORDER_URL} target="_blank" rel="noreferrer">
                 The SEC order
