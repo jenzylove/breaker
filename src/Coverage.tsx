@@ -77,10 +77,10 @@ export default function Coverage() {
       <div className="wrap">
         <div className="section-head section-head--center">
           <span className="beat">Coverage</span>
-          <h2>Every tokenized stock on Solana, and whether it can trade right now</h2>
+          <h2>Every xStocks token on Solana, and whether it can trade right now</h2>
           <p>
-            Breaker works on any of them. This is the live status each issuer publishes, read
-            on every visit. When a stock is halted or its market is shut, the issuer itself
+            Breaker works on any of them. This is the live status their issuer publishes,
+            read on every visit. When a stock is halted or its market is shut, the issuer itself
             refuses to trade it. A liquidity pool keeps going. That gap is what Breaker closes.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function Coverage() {
             <div className="empty">Nothing matches that.</div>
           ) : (
             <>
-              <div className="table-scroll">
+              <div className="table-scroll coverage-scroll">
                 <table>
                   <thead>
                     <tr>

@@ -1111,7 +1111,8 @@ tbody tr {
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rule);
+  color: var(--critical);
+  opacity: 0.8;
   margin-bottom: 4px;
 }
 
@@ -1903,4 +1904,19 @@ tbody tr {
   .adopt-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Twelve rows in view, the rest scroll inside the card, so a list of a
+   thousand stocks never stretches the page. */
+.coverage-scroll {
+  max-height: 540px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.coverage-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
 }
