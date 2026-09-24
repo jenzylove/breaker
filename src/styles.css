@@ -1920,3 +1920,11 @@ tbody tr {
   z-index: 1;
   background: var(--surface);
 }
+
+/* An order that could not be sent says so inside its own card. */
+.side-failed {
+  margin: 10px 0 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}

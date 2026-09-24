@@ -167,13 +167,18 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(503).json({ error: "The demo signer could not be read." });
   }
 
-  const caller = callerOf(request);
+  const body = (typeof request.body === "string" ? JSON.parse(request.body) : request.body) ?? {};
+
+  // One press of the button sends two orders back to back, one to each pool.
+  // Limiting per caller alone refused the second, which is the one the demo
+  // exists to show, so each pool gets its own allowance.
+  const caller = `${callerOf(request)}:${body.guarded === false ? "ordinary" : "guarded"}`;
   const now = Date.now();
   const previous = seen.get(caller);
   if (previous && now - previous < PER_CALLER_MS) {
     return response
       .status(429)
-      .json({ error: "One trade at a time. Give it a few seconds and try again." });
+      .json({ error: "That order was just sent. Give it a few seconds and press again." });
   }
   seen.set(caller, now);
   // Keep the map from growing without bound on a long-lived instance.
@@ -181,7 +186,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
     for (const [key, at] of seen) if (now - at > PER_CALLER_MS * 10) seen.delete(key);
   }
 
-  const body = (typeof request.body === "string" ? JSON.parse(request.body) : request.body) ?? {};
   const listing = venueConfig.listings.find(
     (l) => l.ticker.toUpperCase() === String(body.ticker ?? "").toUpperCase() && l.pool,
   );

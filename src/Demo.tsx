@@ -24,7 +24,9 @@ async function sendOrder(guarded: boolean): Promise<Outcome> {
 export default function Demo() {
   const [running, setRunning] = useState(false);
   const [pair, setPair] = useState<{ ordinary?: Outcome; breaker?: Outcome } | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ side: "ordinary" | "breaker"; message: string } | null>(
+    null,
+  );
 
   // One at a time: both orders share a signer and a pool, so sending them
   // together makes them collide and one silently drops.
@@ -32,13 +34,19 @@ export default function Demo() {
     setRunning(true);
     setPair(null);
     setFailure(null);
+    let side: "ordinary" | "breaker" = "ordinary";
     try {
+      setPair({});
       const ordinary = await sendOrder(false);
       setPair({ ordinary });
+      side = "breaker";
       const breaker = await sendOrder(true);
       setPair({ ordinary, breaker });
     } catch (error) {
-      setFailure(error instanceof Error ? error.message : "Something went wrong.");
+      setFailure({
+        side,
+        message: error instanceof Error ? error.message : "The order could not be sent.",
+      });
     } finally {
       setRunning(false);
     }
@@ -66,8 +74,6 @@ export default function Demo() {
           <span className="run-note">No wallet needed. Both land on chain where you can open them.</span>
         </div>
 
-        {failure ? <div className="notice notice--bad">{failure}</div> : null}
-
         {pair ? (
           <div className="versus">
             <article className="side side--bad">
@@ -79,13 +85,16 @@ export default function Demo() {
                 <>
                   <strong>{pair.ordinary.refused ? "Refused" : "Filled"}</strong>
                   <p>
-                    It settled with the halt raised. A pool has no idea a halt exists, so it prices
-                    the order as if nothing happened.
+                    {pair.ordinary.refused
+                      ? "It refused, which means the halt reached it some other way."
+                      : "It settled with the halt raised. A pool has no idea a halt exists, so it prices the order as if nothing happened."}
                   </p>
                   <a className="link" href={pair.ordinary.explorer} target="_blank" rel="noreferrer">
                     Open the transaction <ArrowUpRight size={13} />
                   </a>
                 </>
+              ) : failure?.side === "ordinary" ? (
+                <p className="side-failed">{failure.message}</p>
               ) : (
                 <p className="side-waiting">Sending…</p>
               )}
@@ -108,8 +117,12 @@ export default function Demo() {
                     Open the transaction <ArrowUpRight size={13} />
                   </a>
                 </>
+              ) : failure?.side === "breaker" ? (
+                <p className="side-failed">{failure.message}</p>
+              ) : failure ? (
+                <p className="side-waiting">Not sent.</p>
               ) : (
-                <p className="side-waiting">{running ? "Waiting for the first…" : "—"}</p>
+                <p className="side-waiting">Waiting for the first order to settle…</p>
               )}
             </article>
           </div>
