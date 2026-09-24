@@ -1,6 +1,25 @@
-# Breaker
+<p align="center">
+  <img src="docs/media/brand/mark.svg" alt="Breaker" width="84">
+</p>
 
-**A trade time compliance guard for tokenized equity venues on Solana.**
+<h1 align="center">Breaker</h1>
+
+<p align="center">
+  <b>Halt protection for tokenized stocks on Solana.</b><br>
+  One call a trading venue adds, so halted stocks stop trading, daily limits hold, and every trade is published.
+</p>
+
+<p align="center">
+  <a href="https://breaker-one.vercel.app"><img src="https://img.shields.io/badge/live-breaker--one.vercel.app-111111" alt="Live site"></a>
+  <a href="https://explorer.solana.com/address/EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe?cluster=devnet"><img src="https://img.shields.io/badge/Solana-devnet%20program-9945FF" alt="Breaker program on devnet"></a>
+  <a href="https://github.com/jenzylove/breaker/actions/workflows/verify.yml"><img src="https://github.com/jenzylove/breaker/actions/workflows/verify.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/jenzylove/breaker/actions/workflows/halt-publisher.yml"><img src="https://github.com/jenzylove/breaker/actions/workflows/halt-publisher.yml/badge.svg" alt="Halt publisher"></a>
+  <a href="https://hackathons.solana.com/hackathons/stocklana"><img src="https://img.shields.io/badge/built%20for-Stocklana-14F195" alt="Built for Stocklana"></a>
+</p>
+
+<p align="center">
+  <img src="docs/media/hero.png" alt="Breaker landing page" width="100%">
+</p>
 
 On 17 September 2026 the SEC issued an order granting temporary conditional exemptive relief under
 Section 36(a)(1) of the Exchange Act. For the first time, tokenized NMS stocks may trade through AMM
@@ -14,15 +33,87 @@ maker is that it never closes. A pool does not know what 0.25% of last month's a
 is, or how much of it today's trading has already consumed. And a pool emits raw token amounts, not
 the dollar denominated tape the order requires to be public within ten minutes of every fill.
 
+The issuer's halt does not reach the chain on its own either. On 24 September 2026 xStocks had seven
+stocks halted, and none of their Solana mints had the Token-2022 pause set, so every one of them stayed
+freely tradable in any pool.
+
 Breaker is the call a venue makes before it settles.
+
+<p align="center">
+  <img src="docs/media/demo.png" alt="The integration demo: the Breaker call switched on, NVIDIA halted, and the swap reverting with SymbolHalted in the program's own logs" width="100%">
+  <br><sub>The live demo: the Breaker call switched on, NVIDIA halted, and the real devnet swap reverting with <code>SymbolHalted</code> in the program's own logs.</sub>
+</p>
 
 | | |
 |---|---|
 | Live site | https://breaker-one.vercel.app |
 | Breaker program (devnet) | [`EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe`](https://explorer.solana.com/address/EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe?cluster=devnet) |
 | Reference pool (devnet) | [`4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU`](https://explorer.solana.com/address/4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU?cluster=devnet) |
-| Live stock status (issuer registry) | `/api/stocks` |
-| Public trade record | `/api/tape` |
+| Live stock status (issuer registry) | [`/api/stocks`](https://breaker-one.vercel.app/api/stocks) |
+| Public trade record | [`/api/tape`](https://breaker-one.vercel.app/api/tape) |
+
+---
+
+## How it works
+
+A venue's swap calls Breaker through CPI before any token moves. Breaker either records the trade or
+returns an error, and the swap's `?` turns that error into a revert of the whole transaction.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as Trader
+    participant P as Venue pool
+    participant B as Breaker program
+    participant H as HaltState (per stock)
+    participant S as Symbol (per stock)
+    T->>P: swap(base_amount)
+    P->>P: price the fill on its own curve
+    P->>B: check_and_record(base, quote, side), signed by the pool PDA
+    B->>H: halted? refreshed within tolerance?
+    B->>S: paused? volume window, cap, breach count
+    alt halted, stale, paused or over the cap
+        B-->>P: error (SymbolHalted, HaltStateStale, VolumeCapExceeded ...)
+        P-->>T: whole transaction reverts, nothing moves
+    else clear
+        B->>S: add the shares to today's window
+        B-->>B: emit TradeRecorded (time, shares, USD price, USD value, side)
+        B-->>P: Ok
+        P->>T: settle the tokens
+    end
+```
+
+Where each input comes from, and who can write it:
+
+```mermaid
+flowchart LR
+    REG[xStocks issuer registry<br/>isTradingHalted per stock] -->|every 5 min| PUB[Halt publisher<br/>api/heartbeat.ts]
+    PUB -->|set_halt| HS[(HaltState accounts)]
+    ADV[ADV publisher] -->|update_adv| SYM[(Symbol accounts)]
+    OP[Venue operator] -->|initialize_venue, list_symbol| SYM
+    subgraph SOL[Solana]
+      POOL[Venue pool] -->|CPI check_and_record| BRK[Breaker program]
+      BRK --> HS
+      BRK --> SYM
+      BRK -->|TradeRecorded events| LOGS[(Transaction logs)]
+    end
+    LOGS --> TAPE[Public record<br/>api/tape.ts]
+    REG --> COV[Coverage<br/>api/stocks.ts]
+```
+
+The halt publisher, the ADV publisher and the operator are separate roles named when the venue is
+created, so a venue can keep the party that profits from trading apart from the party that says whether
+trading is allowed. The test venue uses one key for all three.
+
+## Integrations
+
+| Service | How Breaker uses it |
+|---|---|
+| [Solana](https://solana.com) | The Breaker program and the reference pool (Anchor 1.2) on devnet. Token-2022 mint extensions: Scaled UI Amount for the share count, Pausable for the issuer's own freeze. |
+| [xStocks](https://xstocks.fi) | The public issuer registry: halt flag, trading period and mint for all 1,124 tokens. The halt publisher mirrors it and the coverage table reads it live. |
+| [Helius](https://www.helius.dev) | RPC for the devnet transactions and the public record. Mainnet reads of the real xStocks mints use Solana's public RPC. |
+| [Vercel](https://vercel.com) | Hosts the site and the edge and Node API routes. |
+| [GitHub Actions](https://github.com/features/actions) | Runs the test suites on every push and the halt publisher every five minutes. |
 
 ---
 
@@ -111,13 +202,19 @@ halted count on the page is the issuer's count, not ours.
 
 https://breaker-one.vercel.app runs against devnet and needs no wallet.
 
-- **See it work** sends one NVIDIA order three times from the test venue's own key: to the ordinary
-  pool during a halt (it fills), to the Breaker pool during a halt (refused, `SymbolHalted`), and to
-  the Breaker pool after the halt lifts (it fills and lands in the public record). A halted order is
-  one atomic transaction that raises the halt, trades and lowers it, so nothing is left in a staged
-  state. The order after the halt publishes whatever the issuer currently says.
-- **Every stock** lists all 1,124 xStocks tokens with the issuer's live status.
-- **The public record** is rebuilt from chain logs on each load, and marks the visitor's own trade.
+- **For venues** is the demo. The integration code has a switch that adds or removes the Breaker
+  call, another that sets NVIDIA open or halted, and a button that runs a real swap on devnet from
+  the test venue's key. The program's own logs stream back under the code, and a cleared trade is
+  decoded from its `TradeRecorded` event. A halted run is one atomic transaction that raises the
+  halt, trades and lowers it, so nothing is left in a staged state; an open run publishes whatever
+  the issuer currently says.
+- **Coverage** lists all 1,124 xStocks tokens with the issuer's live status, and counts how many of
+  the halted ones are actually paused on Solana, read from mainnet on each visit.
+- **Record** is rebuilt from chain logs on each load.
+
+<p align="center">
+  <img src="docs/media/coverage.png" alt="Coverage: every xStocks token with the issuer's live status" width="100%">
+</p>
 
 ## What the order requires, and what Breaker does about it
 
@@ -217,7 +314,8 @@ crates/breaker-core/       the compliance arithmetic, no Solana dependencies
 src/                       the site
 api/stocks.ts              live status of every xStocks token, from the issuer
 api/heartbeat.ts           the halt publisher, mirroring the issuer's flag
-api/demo.ts                sends the demo orders from the test venue's key
+api/demo.ts                runs the demo swaps from the test venue's key
+.github/workflows/         tests on every push; the halt publisher every five minutes
 api/tape.ts                the public record, rebuilt from chain logs
 ```
 
@@ -282,9 +380,10 @@ Stated plainly, because a compliance tool that overstates itself is worse than n
 - **Breaker covers three conditions of the order, not all of them.** Permissioned access, issuer
   objection rights, published venue contracts, participant notices, OFAC and recordkeeping are the
   venue's to meet.
-- **The test venue's halt tolerance is set to one hour**, the program's ceiling, because its
-  publisher only runs when someone visits the site. A production publisher would write every few
-  seconds; the program's own default is 120 seconds and the check cannot be disabled.
+- **The test venue's halt tolerance is fifteen minutes.** Its publisher runs every five minutes on
+  GitHub Actions, whose schedule can lag, so the tolerance leaves room for a late run. A production
+  publisher would write every few seconds against the program's 120 second default. The check cannot
+  be disabled.
 - **The first trades on the record carry the wrong direction.** The reference pool passed side `0`
   for a swap in which the pool bought the equity token. It was corrected and redeployed on 24
   September 2026 (devnet slot 503651120). Records on chain cannot be edited, so trades before that
