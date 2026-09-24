@@ -149,9 +149,10 @@ export default function App() {
             <div className="section-head">
               <h2>Why a stock token needs a brake</h2>
               <p>
-                On 17 September the SEC made it legal for real US stocks to trade on public
-                blockchains, for the next five years, on three conditions. Every one of them is
-                something a liquidity pool cannot do on its own.
+                On 17 September the SEC granted conditional relief letting real US stocks trade on
+                public blockchains for five years. The order sets a long list of conditions.
+                Breaker implements the three below, which are the ones a liquidity pool cannot do
+                on its own.
               </p>
             </div>
             <div className="rules">
@@ -169,6 +170,21 @@ export default function App() {
               asks it. If the stock is halted or the limit is gone, the whole trade is cancelled and
               nothing moves.
             </p>
+            <div className="scope-note">
+              <strong>What this does not do.</strong> The order also requires permissioned access,
+              issuer objection rights, published venue contracts, participant notices, OFAC
+              compliance and recordkeeping. Breaker implements none of those. Running it does not
+              make anyone a Tokenized Securities Venue, and this is a testnet demo of selected
+              controls, not a compliance product.{" "}
+              <a
+                href="https://www.federalregister.gov/documents/2026/09/22/2026-19388/order-granting-temporary-conditional-exemptive-relief-pursuant-to-section-36a1-of-the-securities"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read the order
+              </a>
+              .
+            </div>
           </Reveal>
         </div>
       </section>
@@ -190,6 +206,12 @@ export default function App() {
                   raw data
                 </a>
               </div>
+              {tapeIncomplete && tape && tape.length > 0 ? (
+                <div className="tape-warning">
+                  This list is incomplete. The blockchain node rate limited us, so some trades
+                  could not be read. What is shown is real; it is not all of it.
+                </div>
+              ) : null}
               {tape && tape.length > 0 ? (
                 <div className="table-scroll">
                   <table>

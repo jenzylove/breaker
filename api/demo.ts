@@ -87,6 +87,22 @@ const ASSOCIATED_TOKEN = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA
 /** Fixed and small, so repeated presses cost nothing worth protecting. */
 const TRADE_AMOUNT = 400_000_000n;
 
+/** One trade per caller per this interval. In-memory, so it is per instance
+ *  and best effort; the balance floor below is the real ceiling on damage. */
+const PER_CALLER_MS = 6_000;
+const seen = new Map<string, number>();
+
+/** Stop signing once the demo wallet drops here, so it can never be drained to
+ *  the point where the page stops working. Devnet SOL, but a broken demo on
+ *  judging day is the thing actually worth protecting. */
+const BALANCE_FLOOR_LAMPORTS = 200_000_000; // 0.2 SOL
+
+function callerOf(request: VercelRequest): string {
+  const forwarded = request.headers["x-forwarded-for"];
+  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return (raw ?? request.socket?.remoteAddress ?? "unknown").split(",")[0].trim();
+}
+
 // Anchor derives these as sha256("global:<name>")[..8]. Pinned rather than
 // hashed here so this file has no crypto dependency; the browser client has a
 // test that re-derives the same table.
@@ -142,6 +158,20 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(503).json({ error: "The demo signer could not be read." });
   }
 
+  const caller = callerOf(request);
+  const now = Date.now();
+  const previous = seen.get(caller);
+  if (previous && now - previous < PER_CALLER_MS) {
+    return response
+      .status(429)
+      .json({ error: "One trade at a time. Give it a few seconds and try again." });
+  }
+  seen.set(caller, now);
+  // Keep the map from growing without bound on a long-lived instance.
+  if (seen.size > 500) {
+    for (const [key, at] of seen) if (now - at > PER_CALLER_MS * 10) seen.delete(key);
+  }
+
   const body = (typeof request.body === "string" ? JSON.parse(request.body) : request.body) ?? {};
   const listing = venueConfig.listings.find(
     (l) => l.ticker.toUpperCase() === String(body.ticker ?? "").toUpperCase() && l.pool,
@@ -185,6 +215,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
   });
 
   try {
+    const balance = await connection.getBalance(authority.publicKey, "confirmed");
+    if (balance < BALANCE_FLOOR_LAMPORTS) {
+      return response.status(503).json({
+        error: "The demo wallet is low on test SOL. Trading is paused until it is topped up.",
+      });
+    }
+
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
     const tx = new Transaction({
       feePayer: authority.publicKey,

@@ -81,6 +81,9 @@ export default function HeroScene() {
     renderer.toneMappingExposure = 0.92;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
+    // The scene is code split, so the canvas arrives a beat after the copy.
+    // Fade it in over the placeholder rather than popping an empty area.
+    requestAnimationFrame(() => container.classList.add("is-ready"));
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(

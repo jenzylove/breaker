@@ -18,8 +18,15 @@ interface Outcome {
 }
 
 /** What a trade would do right now, said the way a person would say it. */
-function verdict(row: SymbolRow | undefined): { label: string; tone: string; Icon: typeof Check } {
-  if (!row) return { label: "Loading", tone: "muted", Icon: Loader2 };
+function verdict(
+  row: SymbolRow | undefined,
+  readFailed: boolean,
+): { label: string; tone: string; Icon: typeof Check } {
+  if (!row) {
+    return readFailed
+      ? { label: "Could not read the chain", tone: "warn", Icon: TriangleAlert }
+      : { label: "Loading", tone: "muted", Icon: Loader2 };
+  }
   switch (row.status) {
     case "halted":
       return { label: "Halted on its exchange", tone: "stop", Icon: Ban };
@@ -67,6 +74,7 @@ async function sendTrade(ticker: string, guarded: boolean): Promise<Outcome> {
 
 export default function Demo() {
   const [rows, setRows] = useState<Record<string, SymbolRow>>({});
+  const [readFailed, setReadFailed] = useState(false);
   const [running, setRunning] = useState(false);
   const [pair, setPair] = useState<{ without?: Outcome; with?: Outcome } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -96,8 +104,11 @@ export default function Demo() {
         }
       });
       setRows(next);
+      setReadFailed(false);
     } catch {
-      // The board keeps its last good state rather than blanking.
+      // Say so rather than leaving every card on "Loading" forever. The board
+      // keeps whatever it last read successfully.
+      setReadFailed(true);
     }
   }, []);
 
@@ -142,18 +153,23 @@ export default function Demo() {
         {/* ---------------------------------------------------- beat one */}
         <div className="section-head">
           <span className="beat">Step one</span>
-          <h2>NVIDIA is halted right now</h2>
+          <h2>NVIDIA is halted on this exchange</h2>
           <p>
-            This is a live exchange on Solana's test network with four stocks listed. Its halt
-            publisher is mirroring NVIDIA's home exchange, which has stopped trading. The other
-            three are in different states, and every figure below is read from the blockchain.
+            A live exchange on Solana's test network with four stocks listed. Every figure below is
+            read from the blockchain.
+          </p>
+          <p className="provenance">
+            To be clear about where the halt comes from: a real venue would run a publisher that
+            mirrors Nasdaq's halt feed. This demo has no Nasdaq connection. We publish the halt
+            ourselves so you can watch the guard act on it. What is real is the enforcement, which
+            happens on chain and refuses the trade whatever the source.
           </p>
         </div>
 
         <div className="board">
           {LISTINGS.map((listing) => {
             const row = rows[listing.ticker];
-            const v = verdict(row);
+            const v = verdict(row, readFailed);
             const used = row ? Math.min(row.capUsed, 1) : 0;
             const over = row ? Math.max(Math.min(row.capUsed - 1, 1), 0) : 0;
 
@@ -181,7 +197,11 @@ export default function Demo() {
                   </div>
                   <div className="meter-label">
                     <span>
-                      {row ? `${(row.capUsed * 100).toFixed(0)}% of today's limit used` : "reading…"}
+                      {row
+                        ? `${(row.capUsed * 100).toFixed(0)}% of today's limit used`
+                        : readFailed
+                          ? "unavailable"
+                          : "reading…"}
                     </span>
                   </div>
                 </div>

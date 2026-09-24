@@ -1382,3 +1382,73 @@ tbody tr {
     margin-top: 38px;
   }
 }
+
+/* The WebGL chunk lands a beat after the copy. Without this the right half of
+   the hero is visibly empty until it does. */
+.hero-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 8% 4% 8% 10%;
+  border-radius: 50%;
+  background:
+    radial-gradient(38% 42% at 62% 42%, rgba(120, 150, 220, 0.5), transparent 70%),
+    radial-gradient(30% 34% at 40% 62%, rgba(255, 210, 186, 0.42), transparent 72%),
+    radial-gradient(46% 50% at 70% 66%, rgba(255, 255, 255, 0.5), transparent 74%);
+  filter: blur(46px);
+  opacity: 1;
+  transition: opacity 700ms ease;
+}
+
+.hero-canvas.is-ready::before {
+  opacity: 0;
+}
+
+.hero-canvas canvas {
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+.hero-canvas.is-ready canvas {
+  opacity: 1;
+}
+
+/* An incomplete regulatory feed says so above the rows, not instead of them. */
+.tape-warning {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--grid);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* What the order requires that this does not do. */
+.scope-note {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  background: var(--plane);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+  max-width: 88ch;
+}
+
+.scope-note strong {
+  color: var(--ink);
+}
+
+.scope-note a {
+  color: var(--accent);
+}
+
+/* Where the halt state actually comes from. */
+.provenance {
+  margin-top: 14px !important;
+  padding-left: 14px;
+  border-left: 2px solid var(--rule);
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  max-width: 76ch;
+}
