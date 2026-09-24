@@ -100,7 +100,7 @@ export default function Coverage() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="ledger">
           <div className="coverage-bar">
             <div className="coverage-search">
               <Search size={15} aria-hidden />

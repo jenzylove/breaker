@@ -190,14 +190,11 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
   const body = (typeof request.body === "string" ? JSON.parse(request.body) : request.body) ?? {};
   const guarded = body.guarded !== false;
-  // Only a guarded order can be sent clear; the ordinary pool is only ever
-  // shown trading through a halt.
-  const duringHalt = !guarded || body.halted !== false;
+  const duringHalt = body.halted !== false;
 
-  // One press of the button sends three orders back to back. Limiting per
-  // caller alone refused the later ones, which are the ones the demo exists to
-  // show, so each kind of order gets its own allowance.
-  const kind = !guarded ? "ordinary" : duringHalt ? "guarded" : "clear";
+  // Visitors flip between the four combinations quickly, so each combination
+  // gets its own allowance rather than one per caller.
+  const kind = `${guarded ? "guarded" : "ordinary"}:${duringHalt ? "halted" : "open"}`;
   const caller = `${callerOf(request)}:${kind}`;
   const now = Date.now();
   const previous = seen.get(caller);
@@ -320,6 +317,10 @@ export default async function handler(request: VercelRequest, response: VercelRe
       guarded,
       halted: duringHalt,
       issuer_halted: issuer,
+      slot: landed.slot,
+      // The program's own logs, so the page can show what ran rather than
+      // describe it.
+      logs: logs.slice(0, 60),
       refused: Boolean(landed.meta?.err),
       code,
       reason: code ? (REFUSAL[code] ?? "The exchange refused this trade.") : null,
