@@ -39,8 +39,38 @@ interface RpcCall {
   params: unknown[];
 }
 
+/** Some providers reject batched JSON-RPC on their free tier (Helius returns
+ *  403 with "Batch requests are only available for paid plans"). Detected once
+ *  per instance, then every later call goes straight to singles. */
+let batchSupported: boolean | null = null;
+
+async function rpcOne<T>(call: RpcCall): Promise<T | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
+  try {
+    const response = await fetch(RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, ...call }),
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const json = (await response.json()) as { result?: T; error?: unknown };
+    return json.error ? null : ((json.result ?? null) as T | null);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function rpcBatch<T>(calls: RpcCall[]): Promise<(T | null)[]> {
   if (calls.length === 0) return [];
+
+  if (batchSupported === false) {
+    return Promise.all(calls.map((call) => rpcOne<T>(call)));
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
   try {
@@ -52,12 +82,19 @@ async function rpcBatch<T>(calls: RpcCall[]): Promise<(T | null)[]> {
       ),
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error(`RPC returned ${response.status}`);
-    const json = (await response.json()) as
+    const json = (await response.json().catch(() => null)) as
       | { id: number; result?: T; error?: { message?: string } }[]
-      | { error?: { message?: string } };
+      | { error?: { message?: string; code?: number } }
+      | null;
 
-    if (!Array.isArray(json)) throw new Error(json.error?.message ?? "RPC rejected the batch");
+    // A provider that will not batch says so once; fall back and remember.
+    if (!Array.isArray(json)) {
+      batchSupported = false;
+      clearTimeout(timeout);
+      return Promise.all(calls.map((call) => rpcOne<T>(call)));
+    }
+    if (!response.ok) throw new Error(`RPC returned ${response.status}`);
+    batchSupported = true;
 
     const out: (T | null)[] = new Array(calls.length).fill(null);
     for (const item of json) {
@@ -178,7 +215,7 @@ export default async function handler(request: Request): Promise<Response> {
     scanned,
     // Transactions this request could not read. Zero once the cache warms.
     unread,
-    complete: unread === 0,
+    complete: error === null && unread === 0 && scanned > 0,
     count: rows.length,
     transactions: rows,
     ...(error ? { error } : {}),
