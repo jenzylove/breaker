@@ -33,9 +33,42 @@ function status(row: StockRow): { label: string; tone: string; Icon: typeof Chec
   return { label, tone: "go", Icon: Check };
 }
 
+/** Token-2022 Pausable extension (type 26): 32-byte authority, then the flag. */
+function isPaused(base64: string): boolean {
+  const d = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const view = new DataView(d.buffer);
+  for (let o = 166; o + 4 <= d.length; ) {
+    const type = view.getUint16(o, true);
+    const len = view.getUint16(o + 2, true);
+    if (type === 26) return d[o + 4 + 32] === 1;
+    o += 4 + len;
+  }
+  return false;
+}
+
+/** How many of the issuer's halted stocks are actually paused on Solana. */
+async function countPaused(stocks: { mint: string | null; halted: boolean }[]): Promise<number | null> {
+  const mints = stocks.filter((s) => s.halted && s.mint).map((s) => s.mint as string);
+  if (mints.length === 0) return 0;
+  const reply = await fetch("/api/rpc?cluster=mainnet", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getMultipleAccounts",
+      params: [mints, { encoding: "base64" }],
+    }),
+  });
+  const accounts = (await reply.json())?.result?.value as ({ data: [string, string] } | null)[] | undefined;
+  if (!accounts) return null;
+  return accounts.filter((a) => a && isPaused(a.data[0])).length;
+}
+
 export default function Coverage() {
   const [data, setData] = useState<Registry | null>(null);
   const [failed, setFailed] = useState(false);
+  const [paused, setPaused] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [shown, setShown] = useState(PAGE);
@@ -43,7 +76,12 @@ export default function Coverage() {
   useEffect(() => {
     fetch("/api/stocks")
       .then((r) => r.json())
-      .then((d: Registry) => setData(d))
+      .then((d: Registry) => {
+        setData(d);
+        countPaused(d.stocks)
+          .then(setPaused)
+          .catch(() => undefined);
+      })
       .catch(() => setFailed(true));
   }, []);
 
@@ -82,6 +120,21 @@ export default function Coverage() {
             The issuer's own status for all of them. When one is halted or closed, the issuer stops
             trading it. Pools do not.
           </p>
+        </div>
+
+        <div className="tally" data-reveal>
+          <div className="tally-cell">
+            <strong>{data ? data.total.toLocaleString() : "…"}</strong>
+            <span>stock tokens covered</span>
+          </div>
+          <div className="tally-cell tally-cell--stop">
+            <strong>{data ? data.halted.toLocaleString() : "…"}</strong>
+            <span>halted by their issuer right now</span>
+          </div>
+          <div className="tally-cell">
+            <strong>{paused ?? "…"}</strong>
+            <span>of those paused on Solana</span>
+          </div>
         </div>
 
         <div className="ledger" data-reveal>

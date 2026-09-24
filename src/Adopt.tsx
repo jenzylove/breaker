@@ -178,7 +178,7 @@ export default function Adopt({ onRecorded }: { onRecorded: (signature: string) 
     <section className="section adopt-section" id="adopt">
       <div className="wrap">
         <div className="section-head section-head--center" data-reveal>
-          <span className="beat">Demo</span>
+          <span className="beat">For venues</span>
           <h2>How an exchange plugs it in</h2>
           <p>
             One call in the pool's swap. Flip it on or off, halt the stock, and run a real swap on

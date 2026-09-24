@@ -3293,3 +3293,8 @@ p.scope-note {
 .site-footer-brand p {
   max-width: 46ch;
 }
+
+.hero,
+.hero.is-dark {
+  border-bottom: 0;
+}

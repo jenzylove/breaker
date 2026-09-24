@@ -151,9 +151,9 @@ export default function App() {
             Breaker
           </span>
           <nav className="masthead-nav">
-            <a href="#adopt">Demo</a>
             <a href="#why">Why</a>
             <a href="#coverage">Coverage</a>
+            <a href="#adopt">For venues</a>
             <a href="#record">Record</a>
           </nav>
           <div className="masthead-meta">
@@ -168,8 +168,6 @@ export default function App() {
       </header>
 
       <Hero onEnter={toDemo} />
-
-      <Adopt onRecorded={onRecorded} />
 
       <section className="section" id="why">
         <div className="wrap wrap--narrow">
@@ -206,6 +204,8 @@ export default function App() {
       </section>
 
       <Coverage />
+
+      <Adopt onRecorded={onRecorded} />
 
       <section className="section" id="record">
         <div className="wrap">
