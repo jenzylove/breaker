@@ -1,0 +1,95 @@
+{
+  "cluster": "http://127.0.0.1:8899",
+  "order": "SEC Innovation Exemption, effective 2026-09-17",
+  "breaker": "EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe",
+  "reference_pool": "4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU",
+  "steps": [
+    {
+      "name": "create equity mint (Token-2022, Scaled UI Amount)",
+      "mint": "9au8JizvmimBT2DzBRBbs2fAjNFpwkxsVLaZbBtQtief",
+      "tx": "localnet:sbqjuL9o8jumf2B42SvBrP5PQ7iNybJHaHWTpveKj6vZjfKJBBQA5h8Rza1qZmnNCErqccMqbQWi2fXkxNaDypv"
+    },
+    {
+      "name": "create dollar quote mint",
+      "mint": "tEj7sNgWaSftTGGmvu4BML1teNx4qB6681N4QSwhsMi",
+      "tx": "localnet:5vrUUatM2yb8nkiKbh2TPLy7hUqZxcrnhN1PNiWKx19ZNyxwsfovESsicVk9YQtmZabV4VaA56WqVk5nYE4BfHac"
+    },
+    {
+      "name": "fund the taker",
+      "tx": "localnet:iq8bdEPeAwBgss7pHLSuZq3SGGe2fx3xozMF9UNMMKJQ3Keer4dJDh4UuEEqyKs7he6ou86HZgWMP614CFpErF7"
+    },
+    {
+      "name": "initialize venue",
+      "venue": "HbAjsRcNtzgGSVCAdCyyeB5Mn5yCDVU4WdZvpZaixKiS",
+      "tx": "localnet:3tS4LpbnsvcTAzTUqUCZP7mJZWs4wRfiPTzXoAXzY57WDEk9G1N2ZeWxvjjqxqLwSZpT1oWrZLw5AW96rd5kmmhs"
+    },
+    {
+      "name": "list TSLAx as Tier 1 and register the dollar quote asset",
+      "symbol": "Daam7KCbfivHM5sQjY9J2K8TZ17wHYpPD67oMNmUQMA2",
+      "note": "a newly listed symbol starts halted until the publisher opens it",
+      "tx": "localnet:3ALGXSZwhiK5HrFP4m1KsHjtScMVXnDuWcmGe977zubMFgKyH6AftSKSnGobscSovrMCQ7GPua2bntj8JMjGkcWa"
+    },
+    {
+      "name": "publish prior month average daily volume",
+      "adv_shares": "80000",
+      "cap_shares": "200 (0.25% of ADV, Tier 1)",
+      "tx": "localnet:5T86WeXqRuLtbn87sPQizTb8Q6tucNoH37aSGWvSypdnju2EVmoVobm97MjY2SzZx7qrhkPmFzudktkuMCVrwh8Q"
+    },
+    {
+      "name": "halt publisher opens the symbol",
+      "halted": false,
+      "tx": "localnet:2FTBQ7gqciViqbZHQLkJANLSVhFRuf8jc7EsNsd45tC7BamctUqa6AhE51vZwvyg1uS5FVAJ5CWvUFg4RVXjtKF3"
+    },
+    {
+      "name": "create the pool and seed it",
+      "pool": "zMJywQGuD8TuC4rT37M8r4W2W9UGTRQsW4RXmmwaqDB",
+      "reserves": "10,000 TSLAx / 3,000,000 dollars",
+      "tx": "localnet:29sKNFKvbj72cWk7fo4K1vu4ag12kFAWkCRFQDWGAU7WsSuWqbdHyuq84ajsfQxaiFWg4L7gySKQ4nMFYHA1DmJ3"
+    },
+    {
+      "name": "a scheduled multiplier change activates",
+      "stored_multiplier": 1,
+      "effective_multiplier": 1.4861347,
+      "understatement_if_stored_field_is_read": "48.61%",
+      "tx": "localnet:hLaPs8HYGuz646C294BVKVq1MSVUKJLNGV3UjmWbLpbnTwerNsP4uCaMgtL32YvUrjmUBxZuQCtyH289JJCrbY5"
+    },
+    {
+      "name": "1. compliant fill settles through the guard",
+      "sold": "100 TSLAx",
+      "received": "29702.970297 dollars",
+      "shares_consumed": "148.61347 of 200",
+      "note": "the share count follows the effective multiplier, not the stored one",
+      "tx": "localnet:2TrBYj1KeJ2GYckTiLnhWGMnp3XWpU1dvVs6asKvt2PiuhWJyhWSedPrf9k45xSNpJsaWBUY3P19V49q4nkmZ2RG"
+    },
+    {
+      "name": "2a. listing exchange halts TSLAx",
+      "halted": true,
+      "tx": "localnet:3YcGJGMQLstM1EaTgL2cre1k2Cac6QemxL1zJGNk8tP9KdbAMEjBPMgLyvg4uHeMu1zvuW4V6zT57x8mw5CufAMn"
+    },
+    {
+      "name": "2b. guarded swap during the halt",
+      "result": "REVERTED on chain",
+      "error": "SymbolHalted",
+      "error_number": 6000,
+      "reason": "Program log: AnchorError thrown in programs/breaker/src/lib.rs:369. Error Code: SymbolHalted. Error Number: 6000. Error Message: Trading in this symbol is halted on its primary listing exchange."
+    },
+    {
+      "name": "2c. the same swap without the guard, which is every AMM today",
+      "result": "SETTLED while the stock was halted",
+      "received": "29120.559114 dollars",
+      "tx": "localnet:5t2fkJfPpHc4ZtW8WnqWfMbD4ZBowCJzPoKRDoPi6yMBrqXQMHgRb8fd9XwPTKUBivaYGxTeacd4jSqxvjRYH8CU"
+    },
+    {
+      "name": "2d. halt lifted",
+      "halted": false,
+      "tx": "localnet:xZy3FNGkvdKvaGxt1q4FQXB2yud7RKsZxVYFzH8VTcFqivST7LqK7AY51LT87N2G4jas9ATM54jAWNhPkqVXzHx"
+    },
+    {
+      "name": "3. walking the volume cap",
+      "cap_shares": "200",
+      "shares_per_trade": "148.61347",
+      "sequence": "[{\"trade\":1,\"result\":\"settled\",\"signature\":\"2Gxt3wQEzwQZnqvUHYdUAsfFoQ7QCCK8jnBjkRdPHVGCExWYvySQWfLk8FLCpnY1cYAVxNG8Qej7g1U8JWraFyC5\"},{\"trade\":2,\"result\":\"REVERTED\",\"error\":\"VolumeCapExceeded\",\"error_number\":6003}]",
+      "note": "the order allows the first exceedance; the next crossing is refused"
+    }
+  ]
+}
