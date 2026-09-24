@@ -295,7 +295,7 @@ a {
 }
 
 .hero h1 {
-  font-size: clamp(40px, 6.4vw, 92px);
+  font-size: clamp(30px, 3.9vw, 56px);
   line-height: 1.02;
   letter-spacing: -0.04em;
   font-weight: 680;
@@ -315,10 +315,10 @@ a {
 
 .hero-lede {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 52px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
-  max-width: 540px;
+  max-width: 580px;
 }
 
 .hero-rule {
@@ -334,8 +334,8 @@ a {
 .hero-lede p {
   margin: 0;
   color: rgba(22, 30, 46, 0.78);
-  font-size: clamp(13.5px, 0.92vw, 15px);
-  line-height: 1.62;
+  font-size: clamp(14.5px, 1vw, 16px);
+  line-height: 1.65;
 }
 
 .hero-lede p b {
