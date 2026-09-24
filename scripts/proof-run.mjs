@@ -108,28 +108,61 @@ const send = (ixs, signers = []) =>
     }),
   );
 
-/// Sends a transaction that is expected to fail, and reports why.
+/// Sends a transaction that is expected to fail.
+///
+/// Preflight would reject it off chain and leave nothing to inspect, so this
+/// skips preflight and rebroadcasts until the failure actually lands. A revert
+/// anyone can open in an explorer is the whole point of the exercise; a revert
+/// that only ever existed in a simulation proves nothing.
 async function expectRevert(ixs, signers = []) {
-  try {
-    const sig = await sendAndConfirmTransaction(
-      connection,
-      new Transaction().add(...ixs),
-      [payer, ...signers],
-      { commitment: "confirmed" },
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    const tx = new Transaction({ feePayer: payer.publicKey, blockhash, lastValidBlockHeight }).add(
+      ...ixs,
     );
-    return { reverted: false, signature: sig, reason: "transaction unexpectedly succeeded" };
-  } catch (err) {
-    const logs = err?.logs ?? err?.transactionLogs ?? [];
+    tx.sign(payer, ...signers);
+    const raw = tx.serialize();
+    const signature = await connection.sendRawTransaction(raw, {
+      skipPreflight: true,
+      maxRetries: 0,
+    });
+
+    let landed = null;
+    for (let i = 0; i < 40 && !landed; i++) {
+      await sleep(1200);
+      const [status] = (await connection.getSignatureStatuses([signature])).value;
+      if (status?.confirmationStatus) {
+        for (let j = 0; j < 10 && !landed; j++) {
+          landed = await connection.getTransaction(signature, {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0,
+          });
+          if (!landed) await sleep(1000);
+        }
+      } else {
+        await connection
+          .sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 })
+          .catch(() => {});
+      }
+    }
+
+    if (!landed) continue; // blockhash expired before it landed; rebuild and retry
+
+    if (!landed.meta?.err) {
+      return { reverted: false, signature, reason: "transaction unexpectedly succeeded" };
+    }
+    const logs = landed.meta.logMessages ?? [];
     const line = logs.find((l) => l.includes("Error Code")) ?? "";
-    const code = line.match(/Error Code: (\w+)/)?.[1] ?? null;
-    const number = line.match(/Error Number: (\d+)/)?.[1] ?? null;
     return {
       reverted: true,
-      error: code,
-      errorNumber: number ? Number(number) : null,
-      reason: line || String(err?.message ?? err).slice(0, 200),
+      signature,
+      error: /Error Code: (\w+)/.exec(line)?.[1] ?? null,
+      errorNumber: Number(/Error Number: (\d+)/.exec(line)?.[1] ?? NaN) || null,
+      reason: line || JSON.stringify(landed.meta.err),
+      tx: explorer(signature),
     };
   }
+  return { reverted: false, notLanded: true, reason: "transaction never landed; rerun the proof" };
 }
 
 const log = {
@@ -419,10 +452,16 @@ async function main() {
 
   const halted = await expectRevert([swapIx("swap_guarded", TRADE_TOKENS)]);
   step("2b. guarded swap during the halt", {
-    result: halted.reverted ? "REVERTED on chain" : "UNEXPECTEDLY SETTLED",
+    result: halted.notLanded
+      ? "NOT LANDED (rerun the proof)"
+      : halted.reverted
+        ? "REVERTED on chain"
+        : "UNEXPECTEDLY SETTLED",
     error: halted.error,
     error_number: halted.errorNumber,
+    funds_moved: "0",
     reason: halted.reason,
+    tx: halted.signature ? explorer(halted.signature) : null,
   });
 
   before = await quoteBalance();
@@ -443,10 +482,16 @@ async function main() {
     const attempt = await expectRevert([swapIx("swap_guarded", TRADE_TOKENS)]);
     capResults.push(
       attempt.reverted
-        ? { trade: i + 1, result: "REVERTED", error: attempt.error, error_number: attempt.errorNumber }
-        : { trade: i + 1, result: "settled", signature: attempt.signature },
+        ? {
+            trade: i + 1,
+            result: "REVERTED",
+            error: attempt.error,
+            error_number: attempt.errorNumber,
+            tx: explorer(attempt.signature),
+          }
+        : { trade: i + 1, result: "settled", tx: explorer(attempt.signature) },
     );
-    if (attempt.reverted) break;
+    if (attempt.reverted || attempt.notLanded) break;
   }
   step("3. walking the volume cap", {
     cap_shares: `${capShares / SHARE_SCALE}`,

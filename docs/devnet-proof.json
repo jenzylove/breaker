@@ -1,0 +1,97 @@
+{
+  "cluster": "https://api.devnet.solana.com",
+  "order": "SEC Innovation Exemption, effective 2026-09-17",
+  "breaker": "EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe",
+  "reference_pool": "4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU",
+  "steps": [
+    {
+      "name": "create equity mint (Token-2022, Scaled UI Amount)",
+      "mint": "474a3yS1A4NZSjQSumYwzn7a1uL4vbjrxU5G915nrUfe",
+      "tx": "https://explorer.solana.com/tx/5Ao3rGwPewqLTYzJmXhqsjUWQsHp6WKoiSksN9UwDtht9UzxwU7twidQHTjeEBCGoFHAQFKLjhK8XEVRB38ZSrLM?cluster=devnet"
+    },
+    {
+      "name": "create dollar quote mint",
+      "mint": "AHtf7fKwgfEn7443HhwEwQwm5gp4mFeqVYrPEv2C8c28",
+      "tx": "https://explorer.solana.com/tx/ttGJbDtXj93XNtJWvj3xa3cMbQVYDEnskTVRrLEyuPpFNsJUHy3eq8fusQ7y2eMhE64HEMDyqHPVi8iwowTfyBS?cluster=devnet"
+    },
+    {
+      "name": "fund the taker",
+      "tx": "https://explorer.solana.com/tx/3QB5v1DPq7cBHhgqcQ7p9BiH8oTdPVBJ8WuVRCGcugxXJ8FEt9XjcTHcZKtNqGEeiR7oatZjQd9tCXcAob8pXays?cluster=devnet"
+    },
+    {
+      "name": "initialize venue",
+      "venue": "HbAjsRcNtzgGSVCAdCyyeB5Mn5yCDVU4WdZvpZaixKiS",
+      "tx": "https://explorer.solana.com/tx/B7gTut2jehq4ZE6F5iFvdvdYPd8hNcc5N7dLWhZNTS8SNjtCFRg4Fb2Lz8mLwJAvcP9YeZBMNAWZBZYLNKHaEEM?cluster=devnet"
+    },
+    {
+      "name": "list TSLAx as Tier 1 and register the dollar quote asset",
+      "symbol": "55MAGtMBX7eHRuZ9wZDXugUEVaJ3QdbmqfKrQ3rrjY4h",
+      "note": "a newly listed symbol starts halted until the publisher opens it",
+      "tx": "https://explorer.solana.com/tx/4KgeMqu2Fj3tm5XZ6YPgVMfzdx2vEmULNDWiU47EQzxLMPHQqpW9eKcZdjcniQCJmsisFtpG9MoSCdKpa8PJizaE?cluster=devnet"
+    },
+    {
+      "name": "publish prior month average daily volume",
+      "adv_shares": "80000",
+      "cap_shares": "200 (0.25% of ADV, Tier 1)",
+      "tx": "https://explorer.solana.com/tx/3p2i8JwV7bZexFCn77UEQA5bmzFCERaWKXDzixJTdxpNr6WHpjAE3FGGDyvKEPGTvocy86JmhyXKp52PxtJMwbWd?cluster=devnet"
+    },
+    {
+      "name": "halt publisher opens the symbol",
+      "halted": false,
+      "tx": "https://explorer.solana.com/tx/4RNFGEBbtUKfaWFUggCoEDipCfuZHrrTZPraV5TivbZZAHu3EzmHsgDsi3RxxFRxbe1V3uiYuT2Nd8hQLXi3GSVL?cluster=devnet"
+    },
+    {
+      "name": "create the pool and seed it",
+      "pool": "AnawXHyoFrJu8LaVYbz46eoDRHtNK8Ym7yv6CkN8uj8Z",
+      "reserves": "10,000 TSLAx / 3,000,000 dollars",
+      "tx": "https://explorer.solana.com/tx/2ahMMCrqiNT8xWFx76DyiCVFZzpM2uiuTrgrHJ1MXgMpdqfz2GeuZhf4B9pDvx9WXZLewVBAxAXCsx5kW1F6VWcR?cluster=devnet"
+    },
+    {
+      "name": "a scheduled multiplier change activates",
+      "stored_multiplier": 1,
+      "effective_multiplier": 1.4861347,
+      "understatement_if_stored_field_is_read": "48.61%",
+      "tx": "https://explorer.solana.com/tx/3mRcRTrbYU3DKVPXmszWPG51mrDxxJyTZycMhitBZEsnTZtiJReoVdhoJ2so9Zsp5iZDp99XzjT6CiDfrCYzJL7g?cluster=devnet"
+    },
+    {
+      "name": "1. compliant fill settles through the guard",
+      "sold": "100 TSLAx",
+      "received": "29702.970297 dollars",
+      "shares_consumed": "148.61347 of 200",
+      "note": "the share count follows the effective multiplier, not the stored one",
+      "tx": "https://explorer.solana.com/tx/xAzbcP2yNWXspfiyKVWrP8cBmhuovjZ5eupzmevFvgXeKkER3mDDtNvHVzYzqdXHSH6qziX3PTo2TFevdc5MSk3?cluster=devnet"
+    },
+    {
+      "name": "2a. listing exchange halts TSLAx",
+      "halted": true,
+      "tx": "https://explorer.solana.com/tx/66N3ZEhMYPWkKwfNYPknG8ReBV8f5q3BHcNqmbAvM1bwwYV9NLXNQ3x6um5x4px6XJWbeWyt7dmarVTWEVqKsf6Y?cluster=devnet"
+    },
+    {
+      "name": "2b. guarded swap during the halt",
+      "result": "REVERTED on chain",
+      "error": "SymbolHalted",
+      "error_number": 6000,
+      "funds_moved": "0",
+      "reason": "Program log: AnchorError thrown in programs/breaker/src/lib.rs:369. Error Code: SymbolHalted. Error Number: 6000. Error Message: Trading in this symbol is halted on its primary listing exchange.",
+      "tx": "https://explorer.solana.com/tx/2ZFXgvtEWJkaEaXKtizGJLkLTdXg8YstqRykLcC5a9eL7gsfh8QgN2VoiRZFSwyA2zJMqZTxSsSYm6LZt7cBfwTX?cluster=devnet"
+    },
+    {
+      "name": "2c. the same swap without the guard, which is every AMM today",
+      "result": "SETTLED while the stock was halted",
+      "received": "29120.559114 dollars",
+      "tx": "https://explorer.solana.com/tx/3QhzEjBNTz55YebUragBMYrchQWkRoZuf6ZvqZe5BCoQrPshU1TCPUFA5WAeDgaRUvBnTPAT5fQbmJgRosxydBf1?cluster=devnet"
+    },
+    {
+      "name": "2d. halt lifted",
+      "halted": false,
+      "tx": "https://explorer.solana.com/tx/4n17EneQKxRH6UfvCCLsnp1pTbpgtZ9ftmvJm4jXPxVzmeivBmNwEZt3Mr9MJrpuL37KraAYSrhhnUvQxe5h1Yz9?cluster=devnet"
+    },
+    {
+      "name": "3. walking the volume cap",
+      "cap_shares": "200",
+      "shares_per_trade": "148.61347",
+      "sequence": "[{\"trade\":1,\"result\":\"settled\",\"tx\":\"https://explorer.solana.com/tx/4M8yUTxUSkBBrdxB4eQUBTF7LtDnivCi6Nv1vaFVHy5xPwZAt46B8UgpDpMb9ZppbtwHBBhndvb76siXEw7t1DVB?cluster=devnet\"},{\"trade\":2,\"result\":\"REVERTED\",\"error\":\"VolumeCapExceeded\",\"error_number\":6003,\"tx\":\"https://explorer.solana.com/tx/2Z2BhF97pU4gBG4G9mEe8ajUy8XKtr5kenjPFMeqGPva1HTrBJ8i2xRtTX1qDSVXzY1kaVNQoWNTBv3529X6948o?cluster=devnet\"}]",
+      "note": "the order allows the first exceedance; the next crossing is refused"
+    }
+  ]
+}
