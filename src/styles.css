@@ -198,168 +198,70 @@ a {
   align-items: center;
   overflow: hidden;
   isolation: isolate;
+  /* Silver ground with a warm streak sweeping behind the glass, which is what
+     the refraction has to pick up. A flat fill gives the material nothing. */
   background:
-    radial-gradient(70% 55% at 12% 8%, rgba(255, 226, 214, 0.55), transparent 60%),
-    radial-gradient(75% 65% at 88% 30%, rgba(196, 214, 244, 0.75), transparent 62%),
-    radial-gradient(120% 110% at 62% 78%, #aab4c6 0%, #b9c2d1 38%, #ccd3de 100%);
+    linear-gradient(107deg, transparent 28%, rgba(255, 214, 184, 0.5) 42%, rgba(255, 236, 222, 0.24) 52%, transparent 64%),
+    radial-gradient(60% 50% at 78% 22%, rgba(214, 226, 246, 0.72), transparent 66%),
+    radial-gradient(70% 60% at 22% 84%, rgba(206, 212, 224, 0.6), transparent 68%),
+    linear-gradient(168deg, #d6dae1 0%, #c3c9d4 46%, #b4bbc8 100%);
 }
 
 :root[data-theme="dark"] .hero {
   background:
-    radial-gradient(70% 55% at 12% 8%, rgba(120, 78, 64, 0.35), transparent 60%),
-    radial-gradient(75% 65% at 88% 30%, rgba(44, 66, 104, 0.8), transparent 62%),
-    radial-gradient(120% 110% at 62% 78%, #14161c 0%, #1b1e26 42%, #252a34 100%);
+    linear-gradient(107deg, transparent 28%, rgba(168, 104, 74, 0.34) 42%, rgba(140, 96, 76, 0.16) 52%, transparent 64%),
+    radial-gradient(60% 50% at 78% 22%, rgba(48, 66, 100, 0.66), transparent 66%),
+    radial-gradient(70% 60% at 22% 84%, rgba(30, 34, 44, 0.7), transparent 68%),
+    linear-gradient(168deg, #1b1e25 0%, #16181e 46%, #101216 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .hero {
     background:
-      radial-gradient(70% 55% at 12% 8%, rgba(120, 78, 64, 0.35), transparent 60%),
-      radial-gradient(75% 65% at 88% 30%, rgba(44, 66, 104, 0.8), transparent 62%),
-      radial-gradient(120% 110% at 62% 78%, #14161c 0%, #1b1e26 42%, #252a34 100%);
+      linear-gradient(107deg, transparent 28%, rgba(168, 104, 74, 0.34) 42%, rgba(140, 96, 76, 0.16) 52%, transparent 64%),
+      radial-gradient(60% 50% at 78% 22%, rgba(48, 66, 100, 0.66), transparent 66%),
+      radial-gradient(70% 60% at 22% 84%, rgba(30, 34, 44, 0.7), transparent 68%),
+      linear-gradient(168deg, #1b1e25 0%, #16181e 46%, #101216 100%);
   }
 }
 
-.scene {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  perspective: 1200px;
-}
-
-/* A fine grain over the gradient stops it banding on wide screens. */
-.scene-wash {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
-  background-size: 3px 3px;
-  opacity: 0.5;
-  mix-blend-mode: overlay;
-}
-
-.body {
-  position: absolute;
-  width: var(--size);
-  height: var(--size);
-  border-radius: 50%;
-  animation: drift 11s ease-in-out infinite;
-  animation-delay: var(--delay);
-  will-change: transform, translate;
-}
-
-@keyframes drift {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -2.2vmax;
-  }
-}
-
-/* Glass: a tight specular highlight, a cool refraction low and opposite, a warm
-   rim from the environment, and a contact shadow well below. */
-.body--glass,
-.body--core {
-  background:
-    radial-gradient(circle at 33% 26%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.4) 11%, rgba(255, 255, 255, 0) 34%),
-    radial-gradient(circle at 74% 80%, rgba(118, 168, 255, 0.6) 0%, rgba(118, 168, 255, 0) 56%),
-    radial-gradient(circle at 82% 20%, rgba(255, 186, 148, 0.42) 0%, rgba(255, 186, 148, 0) 46%),
-    linear-gradient(152deg, rgba(255, 255, 255, 0.62), rgba(150, 170, 206, 0.34));
-  box-shadow:
-    inset -5px -10px 26px rgba(255, 255, 255, 0.6),
-    inset 7px 13px 30px rgba(58, 88, 148, 0.3),
-    0 26px 54px rgba(42, 62, 102, 0.24);
-  backdrop-filter: blur(3px);
-}
-
-/* The one that carries the eye: deeper, with an iridescent band at the edge. */
-.body--core {
-  background:
-    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.32) 9%, rgba(255, 255, 255, 0) 30%),
-    radial-gradient(circle at 68% 74%, rgba(36, 104, 224, 0.92) 0%, rgba(30, 72, 160, 0.55) 44%, rgba(30, 72, 160, 0) 70%),
-    radial-gradient(circle at 86% 30%, rgba(255, 158, 108, 0.5) 0%, rgba(255, 158, 108, 0) 40%),
-    conic-gradient(
-      from 210deg at 50% 50%,
-      rgba(120, 220, 255, 0.34),
-      rgba(160, 140, 255, 0.28),
-      rgba(255, 170, 140, 0.3),
-      rgba(120, 220, 255, 0.34)
-    ),
-    linear-gradient(150deg, rgba(210, 228, 255, 0.7), rgba(62, 96, 166, 0.55));
-  box-shadow:
-    inset -8px -16px 40px rgba(255, 255, 255, 0.45),
-    inset 12px 22px 52px rgba(14, 38, 92, 0.5),
-    0 46px 90px rgba(24, 44, 88, 0.34);
-}
-
-/* A breaker, tilted into the scene. Open: cool and clear. */
-.body--ring,
-.body--held {
-  border-radius: 50%;
-  background: transparent;
-  transform-style: preserve-3d;
-}
-
-.body--ring::after,
-.body--held::after {
+/* The readability wash spans the whole hero. Sizing it to the copy block left
+   visible horizontal seams across the scene. */
+.hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  border: 0.9vmax solid transparent;
-  background: conic-gradient(
-      from 140deg,
-      rgba(255, 255, 255, 1),
-      rgba(150, 188, 248, 0.72),
-      rgba(255, 255, 255, 1),
-      rgba(120, 156, 214, 0.62),
-      rgba(255, 255, 255, 1)
-    )
-    border-box;
-  -webkit-mask:
-    linear-gradient(#000 0 0) padding-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) padding-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  transform: rotateX(72deg) rotateZ(-16deg);
-  box-shadow: 0 18px 40px rgba(40, 60, 100, 0.22);
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    110% 92% at -12% 50%,
+    rgba(232, 235, 240, 0.94) 0%,
+    rgba(232, 235, 240, 0.76) 26%,
+    rgba(232, 235, 240, 0.34) 44%,
+    rgba(232, 235, 240, 0) 62%
+  );
 }
 
-/* Closed: the only warm ring in the scene, and the fill stops at it. */
-.body--held::after {
-  background: conic-gradient(
-      from 140deg,
-      rgba(255, 236, 232, 0.95),
-      rgba(224, 128, 118, 0.75),
-      rgba(255, 240, 236, 0.9),
-      rgba(208, 92, 82, 0.6),
-      rgba(255, 236, 232, 0.95)
-    )
-    border-box;
-  transform: rotateX(66deg) rotateZ(14deg);
+:root[data-theme="dark"] .hero::before {
+  background: radial-gradient(
+    110% 92% at -12% 50%,
+    rgba(12, 14, 18, 0.94) 0%,
+    rgba(12, 14, 18, 0.78) 26%,
+    rgba(12, 14, 18, 0.36) 44%,
+    rgba(12, 14, 18, 0) 62%
+  );
 }
 
-.body-caught {
+.hero-canvas {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 42%;
-  height: 42%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 32%),
-    radial-gradient(circle at 70% 76%, rgba(214, 82, 72, 0.85) 0%, rgba(190, 60, 52, 0.4) 55%, rgba(190, 60, 52, 0) 74%),
-    linear-gradient(150deg, rgba(255, 228, 222, 0.75), rgba(176, 72, 64, 0.45));
-  box-shadow:
-    inset -4px -8px 20px rgba(255, 255, 255, 0.5),
-    inset 6px 11px 24px rgba(120, 30, 26, 0.4),
-    0 18px 38px rgba(110, 40, 36, 0.3);
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-canvas canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 
 /* The copy sits over the scene with a wash that keeps it readable. */
@@ -368,33 +270,6 @@ a {
   z-index: 2;
   width: 100%;
   padding: calc(var(--bar) + 40px) 0 40px;
-}
-
-/* The wash spans the whole hero, not the text block. Sizing it to the copy
-   left visible horizontal seams across the scene. */
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(
-    120% 90% at -10% 50%,
-    rgba(236, 239, 245, 0.94) 0%,
-    rgba(236, 239, 245, 0.78) 28%,
-    rgba(236, 239, 245, 0.42) 46%,
-    rgba(236, 239, 245, 0) 66%
-  );
-}
-
-:root[data-theme="dark"] .hero::before {
-  background: radial-gradient(
-    120% 90% at -10% 50%,
-    rgba(12, 14, 18, 0.94) 0%,
-    rgba(12, 14, 18, 0.78) 28%,
-    rgba(12, 14, 18, 0.42) 46%,
-    rgba(12, 14, 18, 0) 66%
-  );
 }
 
 .hero-body > * {
