@@ -104,7 +104,7 @@ function outcome(run: Run, trade: TapeEntry | null): Line[] {
   if (run.halted) {
     return [
       { text: "✓ settled during a halt", tone: "bad" },
-      { text: "  nothing stopped it. This is every pool on Solana today.", tone: "muted" },
+      { text: "  nothing stopped it. The pool never saw the halt.", tone: "muted" },
     ];
   }
   return [

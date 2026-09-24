@@ -109,7 +109,7 @@ export default async function handler(): Promise<Response> {
     status: rows.length === 0 ? 502 : 200,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "public, max-age=60, stale-while-revalidate=300",
+      "cache-control": "public, max-age=60, s-maxage=60, stale-while-revalidate=600",
       "access-control-allow-origin": "*",
     },
   });
