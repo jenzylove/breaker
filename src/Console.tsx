@@ -9,7 +9,6 @@ import {
   Gauge,
   Loader2,
   PauseCircle,
-  Play,
   Plus,
   ShieldCheck,
   TriangleAlert,
@@ -231,7 +230,6 @@ export default function Console() {
               symbols you list are real tokenized equities read live from mainnet.
             </p>
           </div>
-          <WalletMultiButton />
         </div>
 
         <ol className="steps">
@@ -431,8 +429,8 @@ export default function Console() {
             <div>
               <h3>Connect to run your own venue</h3>
               <p>
-                Or scroll on to watch the deployed guard refuse a trade on the reference venue,
-                which needs no wallet.
+                You become its halt and volume publisher, and every action from here is a real
+                transaction you sign. Devnet only, so it costs nothing.
               </p>
             </div>
             <WalletMultiButton />

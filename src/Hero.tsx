@@ -29,10 +29,10 @@ export default function Hero({ onEnter }: { onEnter: () => void }) {
           </div>
           <div className="hero-actions">
             <button className="pill pill--solid" onClick={onEnter}>
-              Open the venue console
+              Connect wallet
             </button>
             <a className="pill" href="#proof">
-              See it refuse a trade
+              Watch demo
             </a>
           </div>
         </div>

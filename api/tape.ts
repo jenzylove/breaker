@@ -20,21 +20,45 @@ const BREAKER_PROGRAM =
 
 const MAX_TRANSACTIONS = 60;
 const RPC_TIMEOUT_MS = 9_000;
+/** Public RPC rate limits a burst of single calls, so transactions are read in
+ *  batches. One request for many signatures instead of one each. */
+const BATCH_SIZE = 20;
 
-async function rpc<T>(method: string, params: unknown[]): Promise<T> {
+interface RpcCall {
+  method: string;
+  params: unknown[];
+}
+
+async function rpcBatch<T>(calls: RpcCall[]): Promise<(T | null)[]> {
+  if (calls.length === 0) return [];
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
   try {
     const response = await fetch(RPC, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      body: JSON.stringify(
+        calls.map((call, i) => ({ jsonrpc: "2.0", id: i, method: call.method, params: call.params })),
+      ),
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error(`RPC ${method} returned ${response.status}`);
-    const json = (await response.json()) as { result?: T; error?: { message?: string } };
-    if (json.error) throw new Error(json.error.message ?? `RPC ${method} failed`);
-    return json.result as T;
+    if (!response.ok) throw new Error(`RPC returned ${response.status}`);
+    const json = (await response.json()) as
+      | { id: number; result?: T; error?: { message?: string } }[]
+      | { error?: { message?: string } };
+
+    if (!Array.isArray(json)) {
+      throw new Error(json.error?.message ?? "RPC rejected the batch");
+    }
+
+    // A batch response may arrive out of order, so results are placed by id.
+    const out: (T | null)[] = new Array(calls.length).fill(null);
+    for (const item of json) {
+      if (item && typeof item.id === "number" && !item.error) {
+        out[item.id] = (item.result ?? null) as T | null;
+      }
+    }
+    return out;
   } finally {
     clearTimeout(timeout);
   }
@@ -53,33 +77,45 @@ export default async function handler(request: Request): Promise<Response> {
 
   let entries: TapeEntry[] = [];
   let error: string | null = null;
+  let unread = 0;
+  let scanned = 0;
 
   try {
-    const signatures = await rpc<SignatureInfo[]>("getSignaturesForAddress", [
-      BREAKER_PROGRAM,
-      { limit },
+    const [signatures] = await rpcBatch<SignatureInfo[]>([
+      { method: "getSignaturesForAddress", params: [BREAKER_PROGRAM, { limit }] },
     ]);
+    if (!signatures) throw new Error("Could not read the program's signatures");
 
     // A reverted transaction produced no fill, so it has no place on the tape.
     const landed = signatures.filter((s) => !s.err);
+    scanned = landed.length;
 
-    const transactions = await Promise.all(
-      landed.map(async (info) => {
-        try {
-          const tx = await rpc<{ meta?: { logMessages?: string[] } } | null>("getTransaction", [
-            info.signature,
-            { commitment: "confirmed", maxSupportedTransactionVersion: 0 },
-          ]);
-          const logs = tx?.meta?.logMessages ?? [];
-          return tapeEntriesFromLogs(logs, { signature: info.signature, slot: info.slot });
-        } catch {
-          // One unreadable transaction must not blank the whole tape.
-          return [];
+    for (let i = 0; i < landed.length; i += BATCH_SIZE) {
+      const slice = landed.slice(i, i + BATCH_SIZE);
+      const results = await rpcBatch<{ meta?: { logMessages?: string[] } }>(
+        slice.map((info) => ({
+          method: "getTransaction",
+          params: [info.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }],
+        })),
+      );
+
+      results.forEach((tx, j) => {
+        if (!tx) {
+          // Count it rather than swallowing it. A tape that quietly reports
+          // nothing when it could not read the chain is worse than an error.
+          unread += 1;
+          return;
         }
-      }),
-    );
+        entries.push(
+          ...tapeEntriesFromLogs(tx.meta?.logMessages ?? [], {
+            signature: slice[j].signature,
+            slot: slice[j].slot,
+          }),
+        );
+      });
+    }
 
-    entries = transactions.flat().sort((a, b) => b.slot - a.slot);
+    entries.sort((a, b) => b.slot - a.slot);
     if (symbolFilter) entries = entries.filter((e) => e.symbol.toUpperCase() === symbolFilter);
   } catch (e) {
     error = e instanceof Error ? e.message : "Unable to read the chain";
@@ -89,7 +125,6 @@ export default async function handler(request: Request): Promise<Response> {
     venue_program: BREAKER_PROGRAM,
     cluster: RPC.includes("devnet") ? "devnet" : RPC.includes("mainnet") ? "mainnet-beta" : "custom",
     generated_at: new Date().toISOString(),
-    // Stated so a reader knows the guarantee rather than inferring it.
     freshness: "rebuilt from chain on request; current to the last confirmed slot",
     schema: [
       "symbol",
@@ -109,6 +144,11 @@ export default async function handler(request: Request): Promise<Response> {
       "signature",
       "slot",
     ],
+    /** Transactions examined, and how many could not be read. A reader can tell
+     *  an empty tape from an unavailable one. */
+    scanned,
+    unread,
+    complete: error === null && unread === 0,
     count: entries.length,
     transactions: entries,
     ...(error ? { error } : {}),

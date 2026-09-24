@@ -19,7 +19,6 @@ const steps = proof.steps as Record<string, unknown>[];
 const stepNamed = (prefix: string) => steps.find((s) => String(s.name).startsWith(prefix)) ?? {};
 const guardedHalt = stepNamed("2b.");
 const unguardedHalt = stepNamed("2c.");
-const multiplierStep = stepNamed("a scheduled multiplier");
 
 function Reveal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -61,6 +60,7 @@ function useTheme() {
 export default function App() {
   const { theme, toggle } = useTheme();
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
+  const [tapeIncomplete, setTapeIncomplete] = useState(false);
   // The bar floats clear over the hero and only takes a surface once the
   // scene is behind it.
   const [scrolled, setScrolled] = useState(false);
@@ -77,7 +77,11 @@ export default function App() {
     const load = () =>
       fetch("/api/tape?limit=25")
         .then((r) => r.json())
-        .then((d) => !cancelled && setTape(d.transactions ?? []))
+        .then((d) => {
+          if (cancelled) return;
+          setTape(d.transactions ?? []);
+          setTapeIncomplete(d.complete === false);
+        })
         .catch(() => !cancelled && setTape([]));
     load();
     const id = setInterval(load, 20_000);
@@ -119,8 +123,6 @@ export default function App() {
       </header>
 
       <Hero onEnter={toConsole} />
-
-      <Console />
 
       <section className="section" id="order">
         <div className="wrap">
@@ -216,6 +218,8 @@ export default function App() {
         </div>
       </section>
 
+      <Console />
+
       <section className="section" id="tape">
         <div className="wrap">
           <Reveal>
@@ -250,7 +254,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {tape.map((t) => (
+                      {tape.slice(0, 6).map((t) => (
                         <tr key={t.signature + t.slot}>
                           <td className="sub">{t.timestamp.replace("T", " ").replace(".000Z", "")}</td>
                           <td className="ticker">
@@ -279,68 +283,16 @@ export default function App() {
                   </table>
                 </div>
               ) : (
-                <div className="empty">{tape ? "No fills recorded yet." : "Rebuilding the tape…"}</div>
+                <div className="empty">
+                  {!tape
+                    ? "Rebuilding the tape…"
+                    : tapeIncomplete
+                      ? "The chain could not be read in full just now. Retrying."
+                      : "No fills recorded yet."}
+                </div>
               )}
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      <section className="section" id="integrate">
-        <div className="wrap two-col">
-          <div>
-            <div className="section-head">
-              <h2>One call before you settle</h2>
-              <p>
-                A pool passes the fill it is about to make. Breaker reverts the parent transaction
-                when the symbol is halted, when the halt feed is too stale to prove the venue is
-                mirroring the exchange, or when the fill would breach the cap.
-              </p>
-            </div>
-            <ul className="notes">
-              <li>
-                <span>
-                  <b>The cap is counted in shares, the tape in dollars.</b> Converting a raw token
-                  amount into shares needs the multiplier actually in force, not the one in the
-                  obvious field. On the mint in the proof run those differ by{" "}
-                  {String(multiplierStep.understatement_if_stored_field_is_read ?? "48.61%")}.
-                </span>
-              </li>
-              <li>
-                <span>
-                  <b>A stale halt feed fails closed.</b> A venue that cannot prove it is mirroring
-                  the listing exchange does not get to keep trading on the assumption that it is.
-                </span>
-              </li>
-              <li>
-                <span>
-                  <b>The first exceedance settles, the next is refused.</b> The order excuses one
-                  breach and forces a three month pause for any later one, so a venue that can
-                  prevent the second should never incur it.
-                </span>
-              </li>
-            </ul>
-          </div>
-          <pre className="code">
-            <code>
-              <i>{"// Before the pool moves a single token.\n"}</i>
-              {"breaker::cpi::"}
-              <b>check_and_record</b>
-              {"(\n    CpiContext::new_with_signer(\n"}
-              {"        ctx.accounts.breaker_program.key(),\n"}
-              {"        breaker::cpi::accounts::CheckAndRecord {\n"}
-              {"            venue, symbol, halt_state,\n"}
-              {"            quote_asset, mint,\n"}
-              {"            pool: ctx.accounts.pool.to_account_info(),\n"}
-              {"        },\n        &[pool_seeds],\n    ),\n"}
-              {"    base_amount,   "}
-              <i>{"// equity token units"}</i>
-              {"\n    quote_amount,  "}
-              <i>{"// what settled on the other side"}</i>
-              {"\n    side,\n)?;\n"}
-              <i>{"// Halted, stale, paused or over cap reverts the parent tx."}</i>
-            </code>
-          </pre>
         </div>
       </section>
 

@@ -6,15 +6,17 @@
 :root {
   color-scheme: light;
 
-  --surface: #fcfcfb;
-  --plane: #f9f9f7;
+  /* Cooled to agree with the hero. The warm off-white the body used to wear
+     read as a different product once the scene above it went grey blue. */
+  --surface: #f5f7fa;
+  --plane: #eaeef3;
 
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
+  --ink: #0d1117;
+  --ink-2: #4c5463;
+  --muted: #838b9b;
 
-  --grid: #e1e0d9;
-  --rule: #c3c2b7;
+  --grid: #dde2ea;
+  --rule: #bfc6d2;
 
   --accent: #2a78d6;
   --accent-ink: #ffffff;
@@ -313,10 +315,10 @@ a {
 
 .hero-lede {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
-  max-width: 620px;
+  max-width: 540px;
 }
 
 .hero-rule {
@@ -332,8 +334,8 @@ a {
 .hero-lede p {
   margin: 0;
   color: rgba(22, 30, 46, 0.78);
-  font-size: clamp(15px, 1.15vw, 17px);
-  line-height: 1.65;
+  font-size: clamp(13.5px, 0.92vw, 15px);
+  line-height: 1.62;
 }
 
 .hero-lede p b {
@@ -363,8 +365,8 @@ a {
   justify-content: center;
   gap: 8px;
   border-radius: 999px;
-  padding: 13px 26px;
-  font-size: 14.5px;
+  padding: 12px 24px;
+  font-size: 13.5px;
   font-weight: 560;
   font-family: var(--sans);
   cursor: pointer;
