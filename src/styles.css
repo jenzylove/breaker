@@ -1021,85 +1021,6 @@ tbody tr {
   margin-top: auto;
 }
 
-/* --------------------------------------------------------- the outcome */
-
-.result {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-  padding: 22px 24px;
-  border-radius: 14px;
-  border: 1px solid var(--grid);
-  background: var(--surface);
-  margin-bottom: 22px;
-}
-
-.result--stopped {
-  border-color: color-mix(in srgb, var(--good) 45%, var(--grid));
-}
-
-.result--through {
-  border-color: color-mix(in srgb, var(--critical) 45%, var(--grid));
-}
-
-.result-mark {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-
-.result--stopped .result-mark {
-  background: color-mix(in srgb, var(--good) 14%, transparent);
-  color: var(--good);
-}
-
-.result--through .result-mark {
-  background: color-mix(in srgb, var(--critical) 14%, transparent);
-  color: var(--critical);
-}
-
-.result h3 {
-  margin: 0 0 5px;
-  font-size: 17px;
-  letter-spacing: -0.015em;
-}
-
-.result p {
-  margin: 0 0 8px;
-  color: var(--ink-2);
-  font-size: 14px;
-  max-width: 62ch;
-}
-
-/* The same trade with nothing checking it, set apart from the board. */
-.compare-run {
-  display: flex;
-  gap: 22px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  padding: 22px 24px;
-  border-radius: 14px;
-  border: 1px dashed var(--rule);
-  background: transparent;
-}
-
-.compare-run h3 {
-  margin: 0 0 5px;
-  font-size: 16px;
-  letter-spacing: -0.015em;
-}
-
-.compare-run p {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13.5px;
-  max-width: 60ch;
-}
-
 /* --------------------------------------------------------------- rules */
 
 .rules {
@@ -1207,5 +1128,257 @@ tbody tr {
   .footer-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ------------------------------------------------------------- the beats */
+
+.beat {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.section-head--step {
+  margin-top: 56px;
+}
+
+/* The stock the story runs through gets a ring, so the eye knows where to
+   look before reading a word. */
+.stock--subject {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 16%, transparent);
+}
+
+.run {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.run-note {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 52ch;
+}
+
+/* ------------------------------------------------------- the two outcomes */
+
+.versus {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.side {
+  border: 1px solid var(--grid);
+  border-radius: 14px;
+  padding: 22px 24px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.side--bad {
+  border-color: color-mix(in srgb, var(--critical) 42%, var(--grid));
+}
+
+.side--good {
+  border-color: color-mix(in srgb, var(--good) 42%, var(--grid));
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.side--bad .side-head {
+  color: var(--critical);
+}
+
+.side--good .side-head {
+  color: var(--good);
+}
+
+.side strong {
+  font-size: clamp(21px, 2.4vw, 27px);
+  font-weight: 640;
+  letter-spacing: -0.025em;
+}
+
+.side p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.side-waiting {
+  color: var(--muted) !important;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.side .link {
+  margin-top: auto;
+}
+
+/* ------------------------------------------------------- the consequence */
+
+.consequence {
+  border: 1px solid var(--grid);
+  border-radius: 14px;
+  padding: 26px 28px;
+  background: var(--surface);
+  margin-bottom: 26px;
+}
+
+.consequence h3 {
+  margin: 0 0 20px;
+  font-size: clamp(19px, 2.2vw, 24px);
+  letter-spacing: -0.022em;
+  font-weight: 640;
+}
+
+.consequence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.consequence-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.consequence-grid strong {
+  font-size: clamp(19px, 2vw, 23px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.consequence-grid span {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.consequence-close {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--grid);
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  max-width: 82ch;
+}
+
+/* ---------------------------------------------------------- the adoption */
+
+.adopt {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 26px 28px;
+  border-radius: 14px;
+  border: 1px solid var(--grid);
+  background: var(--surface);
+  margin-top: 44px;
+}
+
+.adopt h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+  letter-spacing: -0.018em;
+  font-weight: 640;
+}
+
+.adopt p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-width: 54ch;
+}
+
+/* The integration, drawn rather than pasted as code. */
+.adopt-flow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adopt-step {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--grid);
+  background: var(--plane);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.adopt-step--check {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.adopt-step--go {
+  border-color: color-mix(in srgb, var(--good) 45%, var(--grid));
+  color: var(--good);
+}
+
+.adopt-step--stop {
+  border-color: color-mix(in srgb, var(--critical) 45%, var(--grid));
+  color: var(--critical);
+}
+
+.adopt-split {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adopt-arrow {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.stakes {
+  margin: 22px 0 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  max-width: 80ch;
+}
+
+@media (max-width: 860px) {
+  .adopt {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .section-head--step {
+    margin-top: 38px;
   }
 }
