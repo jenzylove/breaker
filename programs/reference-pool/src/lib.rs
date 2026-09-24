@@ -130,7 +130,7 @@ pub mod reference_pool {
             ),
             base_amount,
             quote_out,
-            SIDE_POOL_SOLD_BASE,
+            SIDE_POOL_BOUGHT_BASE,
         )?;
 
         settle(
@@ -152,8 +152,10 @@ pub mod reference_pool {
     }
 }
 
-/// The taker gave the pool base tokens and took quote out.
-const SIDE_POOL_SOLD_BASE: u8 = 0;
+/// Breaker's side is from the pool's point of view: 0 when it sold the equity
+/// token, 1 when it bought. This swap takes the taker's equity tokens into the
+/// vault and pays quote out, so the pool bought and the taker sold.
+const SIDE_POOL_BOUGHT_BASE: u8 = 1;
 
 /// Constant product with no fee, so the arithmetic in the proof run is easy to
 /// check by hand.

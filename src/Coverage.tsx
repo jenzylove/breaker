@@ -87,15 +87,15 @@ export default function Coverage() {
 
         <div className="tally">
           <div className="tally-cell">
-            <strong>{data ? data.total.toLocaleString() : "—"}</strong>
+            <strong>{data ? data.total.toLocaleString() : "…"}</strong>
             <span>tokenized stocks with a Solana mint</span>
           </div>
           <div className="tally-cell tally-cell--stop">
-            <strong>{data ? data.halted.toLocaleString() : "—"}</strong>
+            <strong>{data ? data.halted.toLocaleString() : "…"}</strong>
             <span>halted by their issuer right now</span>
           </div>
           <div className="tally-cell tally-cell--idle">
-            <strong>{data ? data.closed.toLocaleString() : "—"}</strong>
+            <strong>{data ? data.closed.toLocaleString() : "…"}</strong>
             <span>outside their market's hours</span>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function Coverage() {
                         <tr key={s.mint}>
                           <td className="ticker">{s.symbol}</td>
                           <td className="coverage-name">{s.name.replace(/ xStock$/i, "")}</td>
-                          <td className="sub">{s.exchange ?? "—"}</td>
+                          <td className="sub">{s.exchange ?? "Unknown"}</td>
                           <td>
                             <span className={`verdict verdict--${st.tone}`}>
                               <st.Icon size={13} strokeWidth={2.3} aria-hidden />

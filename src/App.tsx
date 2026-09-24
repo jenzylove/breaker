@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Moon, Sun } from "lucide-react";
+import { fetchHaltFeed } from "./lib/chain";
 import Hero from "./Hero";
 import Coverage from "./Coverage";
 import Demo from "./Demo";
@@ -35,24 +36,25 @@ function useInView<T extends HTMLElement>(rootMargin = "0px 0px -12% 0px") {
   return { ref, inView };
 }
 
+/** Dark unless the visitor switches. index.html stamps the same default so the
+ *  first paint is already dark. */
 function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   useEffect(() => {
-    if (theme) document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
-  return {
-    theme,
-    toggle: () =>
-      setTheme((t) =>
-        t
-          ? t === "dark"
-            ? "light"
-            : "dark"
-          : window.matchMedia?.("(prefers-color-scheme: dark)").matches
-            ? "light"
-            : "dark",
-      ),
-  };
+  return { theme, toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")) };
+}
+
+const REPO = "https://github.com/jenzylove/breaker";
+const ORDER_URL =
+  "https://www.federalregister.gov/documents/2026/09/22/2026-19388/order-granting-temporary-conditional-exemptive-relief-pursuant-to-section-36a1-of-the-securities";
+
+function ago(seconds: number): string {
+  if (seconds < 90) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `${minutes}m ago`;
+  return `${Math.round(minutes / 60)}h ago`;
 }
 
 const RULES = [
@@ -101,6 +103,8 @@ export default function App() {
   const { theme, toggle } = useTheme();
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
   const [tapeUnread, setTapeUnread] = useState(0);
+  const [mine, setMine] = useState<string | null>(null);
+  const [feedAt, setFeedAt] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -110,31 +114,56 @@ export default function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // `fresh` skips the browser's short cache, for the reload right after an
+  // order so the visitor's own trade shows up.
+  const loadTape = (fresh = false): Promise<TapeEntry[]> =>
+    fetch(`/api/tape?limit=40${fresh ? `&t=${Date.now()}` : ""}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const rows = (d.transactions ?? []) as TapeEntry[];
+        // A refresh that hits a rate limit must not make the record shrink.
+        setTape((prev) => (prev && rows.length < prev.length ? prev : rows));
+        setTapeUnread(typeof d.unread === "number" ? d.unread : 0);
+        return rows;
+      })
+      .catch(() => {
+        setTape((prev) => prev ?? []);
+        return [] as TapeEntry[];
+      });
+
   useEffect(() => {
-    let cancelled = false;
-    const load = () =>
-      fetch("/api/tape?limit=40")
-        .then((r) => r.json())
-        .then((d) => {
-          if (cancelled) return;
-          const rows = (d.transactions ?? []) as TapeEntry[];
-          // A refresh that hits a rate limit must not make the record shrink.
-          setTape((prev) => (prev && rows.length < prev.length ? prev : rows));
-          setTapeUnread(typeof d.unread === "number" ? d.unread : 0);
-        })
-        .catch(() => !cancelled && setTape((prev) => prev ?? []));
-    load();
-    const id = setInterval(load, 90_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    loadTape();
+    const id = setInterval(() => loadTape(), 90_000);
+    return () => clearInterval(id);
   }, []);
 
-  // Keep the reference venue's halt feed fresh while someone is looking.
+  // Keep the test venue's halt feed fresh while someone is looking, then read
+  // back from the chain when it was last written.
   useEffect(() => {
-    fetch("/api/heartbeat", { method: "POST" }).catch(() => undefined);
+    const read = () =>
+      fetchHaltFeed(venueConfig.listings.map((l) => l.halt_state))
+        .then((states) => {
+          const latest = Math.max(...states.map((st) => st.updatedAt));
+          if (Number.isFinite(latest) && latest > 0) setFeedAt(latest);
+        })
+        .catch(() => undefined);
+    fetch("/api/heartbeat", { method: "POST" })
+      .catch(() => undefined)
+      .finally(read);
+    const id = setInterval(read, 60_000);
+    return () => clearInterval(id);
   }, []);
+
+  // The visitor's cleared order takes a few seconds to be readable. Retry until
+  // it is in the record, then it stays marked.
+  const onRecorded = async (signature: string) => {
+    setMine(signature);
+    for (const wait of [1500, 4000, 8000, 14000]) {
+      await new Promise((r) => setTimeout(r, wait));
+      const rows = await loadTape(true);
+      if (rows.some((row) => row.signature === signature)) return;
+    }
+  };
 
   const toDemo = () =>
     document.getElementById("demo")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -199,7 +228,7 @@ export default function App() {
             make anyone a Tokenized Securities Venue. This is a testnet build of three controls, not
             a compliance product.{" "}
             <a
-              href="https://www.federalregister.gov/documents/2026/09/22/2026-19388/order-granting-temporary-conditional-exemptive-relief-pursuant-to-section-36a1-of-the-securities"
+              href={ORDER_URL}
               target="_blank"
               rel="noreferrer"
             >
@@ -212,34 +241,32 @@ export default function App() {
 
       <Coverage />
 
-      <Demo />
+      <Demo onRecorded={onRecorded} />
 
       <Adopt />
 
       <section className="section" id="record">
         <div className="wrap">
           <div className="section-head section-head--center">
-            <span className="beat">Every trade, published</span>
-            <h2>The third condition, running</h2>
+            <span className="beat">The public record</span>
+            <h2>Every trade it lets through is published</h2>
             <p>
-              Every order that clears Breaker on the reference venue is recorded here in dollars,
-              rebuilt from the blockchain each time you load the page, so you can check it against
-              the chain rather than trusting us.
+              The SEC order requires every trade to be made public within ten minutes, in dollars,
+              with its time, size and direction. Breaker writes that record inside the trade itself,
+              so a venue cannot skip it. This table is read straight from the blockchain, not from
+              our server. Send the orders above and the one that clears lands here.
             </p>
           </div>
           <div className="card">
             <div className="card-head">
-              <span>Recorded trades</span>
+              <span>Trades that cleared Breaker</span>
               {tape && tape.length > 0 ? (
                 <span className="tape-count">
                   {tapeUnread > 0
                     ? `showing ${tape.length}, ${tapeUnread} still loading`
-                    : `all ${tape.length} recorded`}
+                    : `${tape.length} on record`}
                 </span>
               ) : null}
-              <a className="count" href="/api/tape" target="_blank" rel="noreferrer">
-                raw data
-              </a>
             </div>
             {tape && tape.length > 0 ? (
               <div className="table-scroll">
@@ -248,6 +275,7 @@ export default function App() {
                     <tr>
                       <th>Time (UTC)</th>
                       <th>Stock</th>
+                      <th>Side</th>
                       <th className="num">Shares</th>
                       <th className="num">Price</th>
                       <th className="num">Value</th>
@@ -256,9 +284,13 @@ export default function App() {
                   </thead>
                   <tbody>
                     {tape.slice(0, 6).map((t) => (
-                      <tr key={t.signature + t.slot}>
-                        <td className="sub">{t.timestamp.replace("T", " ").replace(".000Z", "")}</td>
+                      <tr key={t.signature + t.slot} className={t.signature === mine ? "is-mine" : ""}>
+                        <td className="sub">
+                          {t.timestamp.replace("T", " ").replace(".000Z", "")}
+                          {t.signature === mine ? <span className="mine-tag">your order</span> : null}
+                        </td>
                         <td className="ticker">{t.symbol}</td>
+                        <td className="sub">{t.direction === "buy" ? "Buy" : "Sell"}</td>
                         <td className="num">{t.size_shares.toFixed(4)}</td>
                         <td className="num">${t.price_usd.toFixed(2)}</td>
                         <td className="num">
@@ -281,29 +313,85 @@ export default function App() {
               </div>
             ) : (
               <div className="empty">
-                {tape ? "No trades recorded yet. Send an order above." : "Reading the blockchain…"}
+                {tape ? "No trades recorded yet. Send the orders above." : "Reading the blockchain…"}
               </div>
             )}
           </div>
         </div>
       </section>
 
-      <footer className="footer">
-        <div className="wrap footer-row">
-          <p>
-            Breaker is a check that tokenized stock venues call before they settle a trade. Built on
-            Solana's test network. Not audited, not for real money.
-          </p>
-          <div className="footer-links">
-            <a href={EXPLORER("address", venueConfig.breaker)} target="_blank" rel="noreferrer">
-              The program <ArrowUpRight size={12} />
-            </a>
-            <a href="/api/stocks" target="_blank" rel="noreferrer">
-              Stock data <ArrowUpRight size={12} />
-            </a>
-            <a href="/api/tape" target="_blank" rel="noreferrer">
-              Trade data <ArrowUpRight size={12} />
-            </a>
+      <footer className="site-footer">
+        <div className="wrap">
+          <div className="site-footer-grid">
+            <div className="site-footer-brand">
+              <span className="site-footer-mark">
+                BREAKER<i>.</i>
+              </span>
+              <p>
+                A check that tokenized stock venues on Solana call before they settle a trade. It
+                refuses trades in halted stocks, holds each stock under its daily limit, and
+                publishes every trade it lets through in dollars.
+              </p>
+              <p className="site-footer-small">
+                Runs on Solana's test network. Not audited and not for real money. It covers three
+                conditions of the SEC order, not all of them.
+              </p>
+            </div>
+
+            <nav className="site-footer-col" aria-label="On this page">
+              <h4>On this page</h4>
+              <a href="#why">Why it exists</a>
+              <a href="#coverage">Every stock</a>
+              <a href="#demo">See it work</a>
+              <a href="#adopt">For venues</a>
+              <a href="#record">Public record</a>
+            </nav>
+
+            <nav className="site-footer-col" aria-label="Evidence">
+              <h4>Evidence</h4>
+              <a href={EXPLORER("address", venueConfig.breaker)} target="_blank" rel="noreferrer">
+                The Breaker program
+              </a>
+              <a
+                href={EXPLORER("address", venueConfig.reference_pool)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                The test venue's pool
+              </a>
+              <a href="/api/stocks" target="_blank" rel="noreferrer">
+                Live stock status
+              </a>
+              <a href="/api/tape" target="_blank" rel="noreferrer">
+                Trade record data
+              </a>
+              <a href={ORDER_URL} target="_blank" rel="noreferrer">
+                The SEC order
+              </a>
+            </nav>
+
+            <nav className="site-footer-col" aria-label="Project">
+              <h4>Project</h4>
+              <a href={REPO} target="_blank" rel="noreferrer">
+                Source code
+              </a>
+              <a href={`${REPO}#add-breaker-to-a-venue`} target="_blank" rel="noreferrer">
+                Integration guide
+              </a>
+              <a href={`${REPO}/tree/main/crates/breaker-core`} target="_blank" rel="noreferrer">
+                The rules engine and its tests
+              </a>
+            </nav>
+          </div>
+
+          <div className="site-footer-bar">
+            <span>No wallet, no real money. Every order on this page is a transaction you can open.</span>
+            <span className="site-footer-live">
+              <i className={feedAt ? "is-on" : ""} />
+              {feedAt
+                ? `Halt feed last published ${ago(Date.now() / 1000 - feedAt)}`
+                : "Reading the halt feed…"}
+            </span>
           </div>
         </div>
       </footer>

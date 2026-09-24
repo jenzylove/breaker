@@ -88,3 +88,18 @@ export async function fetchSymbolRows(
   }
   return rows;
 }
+
+/**
+ * Reads the halt flags the publisher keeps current, so the page can say when
+ * the feed was last written without taking the publisher's word for it.
+ */
+export async function fetchHaltFeed(addresses: string[]): Promise<HaltState[]> {
+  if (addresses.length === 0) return [];
+  const accounts = await rpc<(AccountValue | null)[]>("getMultipleAccounts", [
+    addresses,
+    { encoding: "base64" },
+  ]);
+  return accounts.flatMap((account, i) =>
+    account ? [decodeHaltState(addresses[i], decodeBase64(account.data[0]))] : [],
+  );
+}

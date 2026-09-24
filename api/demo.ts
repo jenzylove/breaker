@@ -6,11 +6,15 @@
 // the demo exchange's own devnet key. Nothing of value is at stake: devnet
 // SOL, devnet mints, a fixed trade size, and the key never leaves the server.
 //
-// Each order is one atomic transaction: raise a halt on the stock, attempt the
-// trade, lower the halt. On the ordinary pool the trade settles with the halt
-// raised, which is a pool trading straight through a halt. On Breaker the
+// A halted order is one atomic transaction: raise a halt on the stock, attempt
+// the trade, lower the halt. On the ordinary pool the trade settles with the
+// halt raised, which is a pool trading straight through a halt. On Breaker the
 // guarded trade reverts, and that reverts the whole transaction, halt and all.
 // Either way nothing is left in a fake state and no two visitors can collide.
+//
+// A clear order is the same trade after the halt lifts. It publishes whatever
+// the issuer currently says about the stock, never a state we chose, then
+// trades through Breaker. That one clears and lands in the public record.
 //
 // A refused trade is sent with preflight skipped so the failure actually lands
 // on chain. A revert that only ever existed in a simulation is not evidence.
@@ -116,6 +120,23 @@ const SWAP_GUARDED = Buffer.from([238, 241, 44, 95, 219, 31, 2, 212]);
 const SWAP_UNGUARDED = Buffer.from([92, 5, 207, 14, 181, 254, 13, 59]);
 const SET_HALT = Buffer.from([212, 192, 179, 66, 23, 73, 197, 15]);
 
+const REGISTRY = "https://api.xstocks.fi/api/v2/public/assets";
+
+/** The issuer's own halt flag, or null when it cannot be read. */
+async function issuerHalted(ticker: string): Promise<boolean | null> {
+  try {
+    const reply = await fetch(`${REGISTRY}/${encodeURIComponent(ticker)}`, {
+      headers: { "user-agent": "breaker-demo/1.0", accept: "application/json" },
+      signal: AbortSignal.timeout(6_000),
+    });
+    if (!reply.ok) return null;
+    const node = (await reply.json()) as { isTradingHalted?: unknown };
+    return typeof node.isTradingHalted === "boolean" ? node.isTradingHalted : null;
+  } catch {
+    return null;
+  }
+}
+
 export const config = { maxDuration: 60 };
 
 const meta = (pubkey: PublicKey, isWritable = false, isSigner = false) => ({
@@ -168,11 +189,16 @@ export default async function handler(request: VercelRequest, response: VercelRe
   }
 
   const body = (typeof request.body === "string" ? JSON.parse(request.body) : request.body) ?? {};
+  const guarded = body.guarded !== false;
+  // Only a guarded order can be sent clear; the ordinary pool is only ever
+  // shown trading through a halt.
+  const duringHalt = !guarded || body.halted !== false;
 
-  // One press of the button sends two orders back to back, one to each pool.
-  // Limiting per caller alone refused the second, which is the one the demo
-  // exists to show, so each pool gets its own allowance.
-  const caller = `${callerOf(request)}:${body.guarded === false ? "ordinary" : "guarded"}`;
+  // One press of the button sends three orders back to back. Limiting per
+  // caller alone refused the later ones, which are the ones the demo exists to
+  // show, so each kind of order gets its own allowance.
+  const kind = !guarded ? "ordinary" : duringHalt ? "guarded" : "clear";
+  const caller = `${callerOf(request)}:${kind}`;
   const now = Date.now();
   const previous = seen.get(caller);
   if (previous && now - previous < PER_CALLER_MS) {
@@ -193,7 +219,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(400).json({ error: "That stock has no demo pool." });
   }
 
-  const guarded = body.guarded !== false;
   const connection = new Connection(RPC, "confirmed");
 
   const baseMint = new PublicKey(listing.mint);
@@ -247,12 +272,18 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-    // Raise the halt, trade, lower it. Atomic, so it cannot leak.
-    const tx = new Transaction({
-      feePayer: authority.publicKey,
-      blockhash,
-      lastValidBlockHeight,
-    }).add(haltIx(true), instruction, haltIx(false));
+    const tx = new Transaction({ feePayer: authority.publicKey, blockhash, lastValidBlockHeight });
+    let issuer: boolean | null = null;
+    if (duringHalt) {
+      // Raise the halt, trade, lower it. Atomic, so it cannot leak.
+      tx.add(haltIx(true), instruction, haltIx(false));
+    } else {
+      // Publish what the issuer says right now, then trade. If the issuer
+      // cannot be read nothing is published, and a stale feed is refused.
+      issuer = await issuerHalted(listing.ticker);
+      if (issuer !== null) tx.add(haltIx(issuer));
+      tx.add(instruction);
+    }
     tx.sign(authority);
 
     // Preflight would reject a refused trade off chain and leave nothing to
@@ -287,6 +318,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
     return response.status(200).json({
       ticker: listing.ticker,
       guarded,
+      halted: duringHalt,
+      issuer_halted: issuer,
       refused: Boolean(landed.meta?.err),
       code,
       reason: code ? (REFUSAL[code] ?? "The exchange refused this trade.") : null,

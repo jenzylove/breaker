@@ -21,9 +21,98 @@ Breaker is the call a venue makes before it settles.
 | Live site | https://breaker-one.vercel.app |
 | Breaker program (devnet) | [`EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe`](https://explorer.solana.com/address/EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe?cluster=devnet) |
 | Reference pool (devnet) | [`4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU`](https://explorer.solana.com/address/4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU?cluster=devnet) |
-| Public tape | `/api/tape` |
+| Live stock status (issuer registry) | `/api/stocks` |
+| Public trade record | `/api/tape` |
 
 ---
+
+## Add Breaker to a venue
+
+Breaker is not somewhere anyone trades. It is a program that a venue's own swap calls through CPI,
+the same way a protocol reads a Pyth price from inside its own instruction. Three steps.
+
+**1. Register the venue.** `initialize_venue` names the venue's halt publisher and ADV publisher.
+Those are separate keys from the operator, usually a service mirroring the issuer's feed.
+
+**2. List what it trades.** `list_symbol` per tokenized stock, with its tier (1 or 2). Breaker reads
+the mint and refuses anything that is not a Token-2022 mint with the Scaled UI Amount extension, so
+a venue cannot list a token it mislabels. `register_quote_asset` tells it how to value the quote side
+in dollars.
+
+**3. Add one call before settlement.** This is the complete difference between the two swaps in
+[`programs/reference-pool/src/lib.rs`](programs/reference-pool/src/lib.rs), and the only change a
+pool needs:
+
+```diff
+ pub fn swap(ctx, base_amount) -> Result<()> {
+     let quote_out = quote_for_base(..)?;
+
++    breaker::cpi::check_and_record(
++        CpiContext::new_with_signer(
++            breaker_program,
++            CheckAndRecord { venue, symbol, halt_state, quote_asset, mint, pool },
++            &[pool_seeds],
++        ),
++        base_amount, quote_out, side,
++    )?;
+
+     settle(..)  // tokens move only if the check passed
+ }
+```
+
+That call does three things inside the same transaction:
+
+1. **Checks the halt.** Refuses if the stock is halted, or if the halt flag has not been refreshed
+   within the venue's tolerance, so a silent publisher fails closed.
+2. **Counts the trade.** Adds it to the stock's rolling 24 hour share volume. The first crossing of the
+   cap settles and is flagged, as the order allows. Later crossings are refused.
+3. **Publishes it.** Emits `TradeRecorded` with the time, share size, dollar price, dollar value and
+   direction. The public record is rebuilt from these events.
+
+If any check fails the CPI returns an error, the swap's `?` propagates it, and the whole transaction
+reverts. Nothing moves.
+
+| Code | Error | When |
+|---|---|---|
+| 6000 | `SymbolHalted` | The stock is halted on its listing exchange |
+| 6001 | `HaltStateStale` | The halt feed is older than the venue's tolerance |
+| 6002 | `SymbolPausedForBreach` | The stock is inside a three month pause |
+| 6003 | `VolumeCapExceeded` | The trade would cross the cap a second time |
+| 6004 | `AdvUnset` | No volume figure has been published for the stock |
+| 6009 | `IssuerPaused` | The issuer has paused the mint |
+| 6011 | `VenuePaused` | The venue operator has paused trading |
+
+`side` is from the pool's point of view: `0` when the pool sold the equity token, `1` when it bought
+it. The pool must sign the CPI with its own seeds, so no one can write trades into the record on
+another pool's behalf.
+
+---
+
+## Where the halts come from
+
+The halt flag is only as good as its publisher, so the publisher does not decide anything. It mirrors
+the issuer. xStocks publishes a registry of every tokenized stock it issues, 1,124 of them with a
+Solana mint, and each entry carries the issuer's own `isTradingHalted` flag and trading period.
+[`api/heartbeat.ts`](api/heartbeat.ts) reads that flag for each listed stock and writes it on chain.
+If the registry cannot be read, it publishes nothing, the feed ages past its tolerance, and Breaker
+refuses trades rather than guessing.
+
+The site's coverage table reads the same registry live ([`api/stocks.ts`](api/stocks.ts)), so the
+halted count on the page is the issuer's count, not ours.
+
+---
+
+## The site
+
+https://breaker-one.vercel.app runs against devnet and needs no wallet.
+
+- **See it work** sends one NVIDIA order three times from the test venue's own key: to the ordinary
+  pool during a halt (it fills), to the Breaker pool during a halt (refused, `SymbolHalted`), and to
+  the Breaker pool after the halt lifts (it fills and lands in the public record). A halted order is
+  one atomic transaction that raises the halt, trades and lowers it, so nothing is left in a staged
+  state. The order after the halt publishes whatever the issuer currently says.
+- **Every stock** lists all 1,124 xStocks tokens with the issuer's live status.
+- **The public record** is rebuilt from chain logs on each load, and marks the visitor's own trade.
 
 ## What the order requires, and what Breaker does about it
 
@@ -46,7 +135,7 @@ symbol.
 
 The program tracks a rolling 24 hour share volume window per symbol against a published ADV figure.
 The first crossing settles and is recorded, exactly as the order allows. **Every crossing after that
-is refused rather than allowed and then punished** — a venue that can prevent a second breach should
+is refused rather than allowed and then punished.** A venue that can prevent a second breach should
 never incur one. `report_breach` still applies the three month pause for breaches that happened at an
 affiliated venue this program cannot observe.
 
@@ -59,9 +148,6 @@ every request, so the tape is current to the last confirmed slot rather than to 
 last ran. Nothing in it is privileged: the same rows can be reconstructed by anyone reading the
 program's logs, which is what makes the tape verifiable rather than merely published.
 
-The order's fourth condition, permissioned access, is already solved at the token level by Solana's
-token extensions. Breaker checks it rather than claiming it.
-
 ---
 
 ## The share count problem
@@ -71,7 +157,7 @@ token amount a pool moves.
 
 Tokenized equities use the Token-2022 Scaled UI Amount extension, which carries *two* multipliers and
 an activation timestamp. Once that timestamp passes, the live multiplier is the one that is **not**
-in the obvious field. This is not hypothetical — it is the live state of real mints today.
+in the obvious field. This is not hypothetical. It is the live state of real mints today.
 
 The devnet run activates exactly that condition mid flight:
 
@@ -110,7 +196,7 @@ Cap 200 shares, 148.61 shares per fill.
 
 | Fill | Result | |
 |---|---|---|
-| 1 | Settled — first exceedance, allowed by the order and recorded | [tx](https://explorer.solana.com/tx/4M8yUTxUSkBBrdxB4eQUBTF7LtDnivCi6Nv1vaFVHy5xPwZAt46B8UgpDpMb9ZppbtwHBBhndvb76siXEw7t1DVB?cluster=devnet) |
+| 1 | Settled: first exceedance, allowed by the order and recorded | [tx](https://explorer.solana.com/tx/4M8yUTxUSkBBrdxB4eQUBTF7LtDnivCi6Nv1vaFVHy5xPwZAt46B8UgpDpMb9ZppbtwHBBhndvb76siXEw7t1DVB?cluster=devnet) |
 | 2 | **Reverted**, `VolumeCapExceeded` (6003) | [tx](https://explorer.solana.com/tx/2Z2BhF97pU4gBG4G9mEe8ajUy8XKtr5kenjPFMeqGPva1HTrBJ8i2xRtTX1qDSVXzY1kaVNQoWNTBv3529X6948o?cluster=devnet) |
 
 Full artifact with all 15 steps: [`docs/devnet-proof.json`](docs/devnet-proof.json).
@@ -123,13 +209,16 @@ Full artifact with all 15 steps: [`docs/devnet-proof.json`](docs/devnet-proof.js
 programs/breaker/          the guard a venue calls before it settles
 programs/reference-pool/   a constant product pool, with and without the guard
 crates/breaker-core/       the compliance arithmetic, no Solana dependencies
-src/                       dashboard and tape viewer
-api/tape.ts                the public dollar tape
+src/                       the site
+api/stocks.ts              live status of every xStocks token, from the issuer
+api/heartbeat.ts           the halt publisher, mirroring the issuer's flag
+api/demo.ts                sends the demo orders from the test venue's key
+api/tape.ts                the public record, rebuilt from chain logs
 ```
 
 **`breaker-core`** holds the cap and halt rules as pure functions with no Solana dependencies, so the
 arithmetic is testable directly. 18 tests cover the tier percentages, window rollover, the exact cap
-boundary, the first exceedance allowance, fail-closed staleness, and the multiplier resolution pinned
+boundary, the first exceedance allowance, staleness failing closed, and the multiplier resolution pinned
 to real mint values.
 
 **The reference pool** exposes `swap_unguarded` and `swap_guarded` running identical curve maths. One
@@ -185,9 +274,16 @@ Stated plainly, because a compliance tool that overstates itself is worse than n
 - **The order aggregates volume caps across affiliated venues.** This implementation enforces one
   venue's own volume.
 - **Devnet only.** Not audited, and not deployed to mainnet.
-- **The demo venue's halt tolerance is set to one hour**, the program's ceiling, so the dashboard
-  does not read stale between proof runs. Production venues would heartbeat in seconds; the program's
-  own default is 120 seconds and the check cannot be disabled.
+- **Breaker covers three conditions of the order, not all of them.** Permissioned access, issuer
+  objection rights, published venue contracts, participant notices, OFAC and recordkeeping are the
+  venue's to meet.
+- **The test venue's halt tolerance is set to one hour**, the program's ceiling, because its
+  publisher only runs when someone visits the site. A production publisher would write every few
+  seconds; the program's own default is 120 seconds and the check cannot be disabled.
+- **The first trades on the record carry the wrong direction.** The reference pool passed side `0`
+  for a swap in which the pool bought the equity token. It was corrected and redeployed on 24
+  September 2026 (devnet slot 503651120). Records on chain cannot be edited, so trades before that
+  slot read "buy" where the taker sold.
 
 ---
 
