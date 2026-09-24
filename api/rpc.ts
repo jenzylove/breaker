@@ -1,14 +1,41 @@
 export const config = { runtime: "edge" };
 
-// Devnet by default, since that is where the venue in the proof run lives.
-const upstream = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
-const ALLOWED_METHODS = new Set(["getAccountInfo", "getMultipleAccounts", "getSlot"]);
-const MAX_BODY_BYTES = 64 * 1024;
+// Two clusters, because the console reads real tokenized equities on mainnet
+// while the guard it drives is deployed to devnet.
+const ENDPOINTS: Record<string, string> = {
+  devnet: process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com",
+  mainnet: process.env.SOLANA_MAINNET_RPC_URL ?? "https://api.mainnet-beta.solana.com",
+};
+
+// Read methods only. The browser never needs anything else through this proxy,
+// and an open proxy is somebody else's rate limit problem to exploit.
+const ALLOWED_METHODS = new Set([
+  "getAccountInfo",
+  "getMultipleAccounts",
+  "getSlot",
+  "getLatestBlockhash",
+  "getSignatureStatuses",
+  "getTransaction",
+  "getMinimumBalanceForRentExemption",
+  "getTokenAccountBalance",
+  "simulateTransaction",
+  "getProgramAccounts",
+  "sendTransaction",
+  "getFeeForMessage",
+  "getEpochInfo",
+  "getBlockHeight",
+]);
+
+const MAX_BODY_BYTES = 128 * 1024;
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405, headers: { Allow: "POST" } });
   }
+
+  const cluster = new URL(request.url).searchParams.get("cluster") ?? "devnet";
+  const upstream = ENDPOINTS[cluster];
+  if (!upstream) return new Response("Unknown cluster", { status: 400 });
 
   const body = await request.text();
   if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
@@ -21,16 +48,21 @@ export default async function handler(request: Request): Promise<Response> {
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
-  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
-    return new Response("A single JSON-RPC request is required", { status: 400 });
+
+  // A batch is fine as long as every call in it is allowed.
+  const calls = Array.isArray(payload) ? payload : [payload];
+  if (calls.length === 0 || calls.length > 20) {
+    return new Response("Unsupported batch size", { status: 400 });
   }
-  const method = (payload as { method?: unknown }).method;
-  if (typeof method !== "string" || !ALLOWED_METHODS.has(method)) {
-    return new Response("JSON-RPC method is not allowed", { status: 403 });
+  for (const call of calls) {
+    const method = (call as { method?: unknown })?.method;
+    if (typeof method !== "string" || !ALLOWED_METHODS.has(method)) {
+      return new Response("JSON-RPC method is not allowed", { status: 403 });
+    }
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
+  const timeout = setTimeout(() => controller.abort(), 9_000);
   let response: Response;
   try {
     response = await fetch(upstream, {

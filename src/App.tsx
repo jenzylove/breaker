@@ -1,19 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowUpRight,
-  CircleSlash,
-  Clock,
-  Gauge,
-  Moon,
-  PauseCircle,
-  ShieldCheck,
-  Sun,
-  TriangleAlert,
-} from "lucide-react";
-import HeroArt from "./HeroArt";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, CircleSlash, Moon, ShieldCheck, Sun } from "lucide-react";
+import Hero from "./Hero";
+import Console from "./Console";
 import proof from "../docs/devnet-proof.json";
-import { fetchSymbolRows } from "./lib/chain";
-import type { SymbolRow, SymbolStatus } from "./lib/venue";
 import type { TapeEntry } from "./lib/tape";
 
 const EXPLORER = (kind: "address" | "tx", id: string) =>
@@ -23,111 +12,33 @@ const EXPLORER = (kind: "address" | "tx", id: string) =>
 function asMoney(raw: unknown, fallback: string): string {
   const value = Number(String(raw ?? "").replace(/[^0-9.]/g, ""));
   if (!Number.isFinite(value) || value === 0) return fallback;
-  return `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const steps = proof.steps as Record<string, unknown>[];
-const stepNamed = (prefix: string) =>
-  steps.find((s) => String(s.name).startsWith(prefix)) ?? {};
-
+const stepNamed = (prefix: string) => steps.find((s) => String(s.name).startsWith(prefix)) ?? {};
 const guardedHalt = stepNamed("2b.");
 const unguardedHalt = stepNamed("2c.");
-const capWalk = stepNamed("3.");
 const multiplierStep = stepNamed("a scheduled multiplier");
 
-/* ------------------------------------------------------------- status */
-
-const STATUS_ICON: Record<SymbolStatus, typeof ShieldCheck> = {
-  trading: ShieldCheck,
-  halted: CircleSlash,
-  stale: Clock,
-  paused: PauseCircle,
-  capped: Gauge,
-  unconfigured: TriangleAlert,
-};
-
-const STATUS_LABEL: Record<SymbolStatus, string> = {
-  trading: "Trading",
-  halted: "Halted",
-  stale: "Feed stale",
-  paused: "Paused",
-  capped: "Cap reached",
-  unconfigured: "Not configured",
-};
-
-function Status({ status }: { status: SymbolStatus }) {
-  const Icon = STATUS_ICON[status];
-  // Icon plus label, never colour alone: two of these steps sit below 3:1 on
-  // the light surface by design.
-  return (
-    <span className={`status status-${status}`}>
-      <Icon size={14} strokeWidth={2.2} aria-hidden />
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
-
-/* -------------------------------------------------------------- meter */
-
-function CapMeter({ row }: { row: SymbolRow }) {
-  const used = Math.min(row.capUsed, 1);
-  const over = Math.max(row.capUsed - 1, 0);
-  const pct = (row.capUsed * 100).toFixed(1);
-  return (
-    <div className="meter">
-      <div
-        className="meter-track"
-        role="meter"
-        aria-valuenow={Number(pct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${row.ticker} cap usage`}
-      >
-        <div className="meter-fill" style={{ width: `${used * 100}%` }} />
-        {over > 0 ? (
-          <div className="meter-over" style={{ width: `${Math.min(over, 1) * 100}%` }} />
-        ) : null}
-      </div>
-      <div className="meter-label">
-        <span>{pct}% of cap</span>
-        <span>{row.headroomShares.toFixed(2)} sh left</span>
-      </div>
-    </div>
-  );
-}
-
-/* --------------------------------------------------------------- page */
-
-/** Reveals a block once as it enters the viewport. */
-function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Reveal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
-
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
-    if (typeof IntersectionObserver === "undefined") {
+    if (!node || typeof IntersectionObserver === "undefined") {
       setShown(true);
       return;
     }
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShown(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "0px 0px -12% 0px" },
+      ([entry]) => entry.isIntersecting && (setShown(true), observer.disconnect()),
+      { rootMargin: "0px 0px -10% 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-
   return (
-    <div ref={ref} className={`reveal ${shown ? "is-in" : ""} ${className}`.trim()}>
+    <div ref={ref} className={`reveal ${shown ? "is-in" : ""}`}>
       {children}
     </div>
   );
@@ -138,38 +49,18 @@ function useTheme() {
   useEffect(() => {
     if (theme) document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
-  const toggle = () =>
-    setTheme((t) => {
-      if (t) return t === "dark" ? "light" : "dark";
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      return prefersDark ? "light" : "dark";
-    });
-  return { theme, toggle };
+  return {
+    theme,
+    toggle: () =>
+      setTheme((t) =>
+        t ? (t === "dark" ? "light" : "dark") : window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "light" : "dark",
+      ),
+  };
 }
 
 export default function App() {
   const { theme, toggle } = useTheme();
-  const [rows, setRows] = useState<SymbolRow[] | null>(null);
-  const [rowsError, setRowsError] = useState<string | null>(null);
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
-
-  const listings = useMemo(
-    () =>
-      ((proof as { listings?: { symbol: string; halt_state: string }[] }).listings ?? []).map(
-        (l) => ({ symbol: l.symbol, haltState: l.halt_state }),
-      ),
-    [],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSymbolRows(listings)
-      .then((r) => !cancelled && setRows(r))
-      .catch((e) => !cancelled && setRowsError(e instanceof Error ? e.message : "unavailable"));
-    return () => {
-      cancelled = true;
-    };
-  }, [listings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,22 +77,29 @@ export default function App() {
     };
   }, []);
 
+  const toConsole = () =>
+    document.getElementById("console")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
   return (
     <>
       <header className="masthead">
-        <div className="wrap masthead-inner">
+        <div className="masthead-inner">
           <span className="wordmark">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-              <circle cx="3" cy="9" r="2" fill="currentColor" />
-              <circle cx="15" cy="9" r="2" fill="currentColor" />
-              <path d="M3 9 L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <circle cx="3.5" cy="10" r="2.2" fill="currentColor" />
+              <circle cx="16.5" cy="10" r="2.2" fill="currentColor" />
+              <path d="M3.5 10 L12.5 3.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
             </svg>
             Breaker
           </span>
+          <nav className="masthead-nav">
+            <a href="#console">Console</a>
+            <a href="#proof">Proof</a>
+            <a href="#tape">Tape</a>
+          </nav>
           <div className="masthead-meta">
-            <span className="chip">devnet</span>
             <a className="chip" href={EXPLORER("address", proof.breaker)} target="_blank" rel="noreferrer">
-              {proof.breaker.slice(0, 4)}…{proof.breaker.slice(-4)}
+              devnet · {proof.breaker.slice(0, 4)}…{proof.breaker.slice(-4)}
             </a>
             <button className="theme-toggle" onClick={toggle} aria-label="Toggle colour theme">
               {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
@@ -210,224 +108,171 @@ export default function App() {
         </div>
       </header>
 
-      <section className="hero">
-        <div className="wrap hero-lead">
-          <div>
-            <span className="eyebrow">SEC Innovation Exemption · effective 17 September 2026</span>
-            <h1>Tokenized stocks can trade on chain now. On conditions no AMM meets.</h1>
-            <p>
-              The order lets tokenized NMS stocks trade through public liquidity pools for the next
-              five years. A pool has no idea the listing exchange halted a stock, no idea how much
-              of its volume cap today has consumed, and emits raw token amounts rather than a dollar
-              tape. Breaker is the check a venue calls before it settles.
-            </p>
-          </div>
-          <HeroArt />
-        </div>
-        <div className="wrap" style={{ marginTop: 34 }}>
-          <div className="conditions">
-            <h2>What the order requires at trade time</h2>
-            <ol>
-              <li>
-                <span className="cond-num">01</span>
-                <span>
-                  <b>Stop with the exchange.</b> Trading halts concurrently with any halt or
-                  suspension of the underlying on its primary listing exchange.
-                </span>
-              </li>
-              <li>
-                <span className="cond-num">02</span>
-                <span>
-                  <b>Stay under the cap.</b> 0.25% of prior month average daily volume for Tier 1,
-                  2.5% for Tier 2. A second breach forces a three month pause in that symbol.
-                </span>
-              </li>
-              <li>
-                <span className="cond-num">03</span>
-                <span>
-                  <b>Publish the tape.</b> Dollar denominated transaction data, public and machine
-                  readable, within ten minutes of every fill.
-                </span>
-              </li>
-            </ol>
-          </div>
+      <Hero onEnter={toConsole} />
+
+      <Console />
+
+      <section className="section" id="order">
+        <div className="wrap">
+          <Reveal>
+            <div className="section-head">
+              <h2>Three conditions, none of which an AMM can meet</h2>
+              <p>
+                The order grants a five year exemption from the definition of "exchange". These are
+                the parts a pool has to satisfy at the moment it settles, rather than in a filing
+                afterwards.
+              </p>
+            </div>
+            <div className="conditions">
+              {[
+                {
+                  n: "01",
+                  title: "Stop when the exchange stops",
+                  body: "Trading halts concurrently with any halt or suspension of the underlying on its primary listing exchange. A pool has no idea that happened, because the premise of an AMM is that it never closes.",
+                  breaker: "Reverts on a halt, and on a halt feed too stale to prove the venue is still mirroring the exchange.",
+                },
+                {
+                  n: "02",
+                  title: "Stay under the volume cap",
+                  body: "0.25% of the prior month's average daily share volume for Tier 1, 2.5% for Tier 2. The first exceedance is excused; any later one forces a three month pause in that symbol.",
+                  breaker: "Tracks a rolling share window per symbol and refuses the fill that would cross it once a breach is on record.",
+                },
+                {
+                  n: "03",
+                  title: "Publish a dollar tape",
+                  body: "Transaction data, public and machine readable, within ten minutes of every fill: symbol, price, size, UTC timestamp, direction and pool. Pools emit raw token amounts, which are none of those things.",
+                  breaker: "Emits every settled fill priced in dollars, rebuilt from chain logs on request at /api/tape.",
+                },
+              ].map((c) => (
+                <article className="condition" key={c.n}>
+                  <span className="condition-n">{c.n}</span>
+                  <h3>{c.title}</h3>
+                  <p>{c.body}</p>
+                  <p className="condition-do">{c.breaker}</p>
+                </article>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
       <section className="section" id="proof">
         <div className="wrap">
           <Reveal>
-          <div className="section-head">
-            <h2>Same pool. Same curve. One call apart.</h2>
-            <p>
-              Both transactions below ran in one devnet session against the same reference pool
-              while the symbol was halted. The only difference is whether the pool asked Breaker
-              first.
-            </p>
-          </div>
-          <div className="compare">
-            <article className="outcome outcome--leaked">
-              <div className="outcome-top">
-                <CircleSlash size={15} color="var(--critical)" aria-hidden />
-                <code>swap_unguarded</code>
-              </div>
-              <strong className="outcome-figure">{asMoney(unguardedHalt.received, "$29,120.56")}</strong>
+            <div className="section-head">
+              <h2>Same pool. Same curve. One call apart.</h2>
               <p>
-                settled against a halted stock. This is not a strawman: it is how every AMM on
-                Solana behaves today, because a pool cannot see a listing exchange.
+                Both transactions ran in one devnet session against the same reference pool while
+                the symbol was halted. The only difference is whether the pool asked Breaker first.
               </p>
-              {unguardedHalt.tx ? (
-                <a className="link" href={String(unguardedHalt.tx)} target="_blank" rel="noreferrer">
-                  View transaction <ArrowUpRight size={13} />
-                </a>
-              ) : null}
-            </article>
-
-            <article className="outcome outcome--blocked">
-              <div className="outcome-top">
-                <ShieldCheck size={15} color="var(--good)" aria-hidden />
-                <code>swap_guarded</code>
-              </div>
-              <strong className="outcome-figure">Reverted</strong>
-              <p>
-                with <b>{String(guardedHalt.error ?? "SymbolHalted")}</b> (error{" "}
-                {String(guardedHalt.error_number ?? 6000)}). The whole transaction rolled back and
-                no funds moved.
-              </p>
-              {guardedHalt.tx ? (
-                <a className="link" href={String(guardedHalt.tx)} target="_blank" rel="noreferrer">
-                  View reverted transaction <ArrowUpRight size={13} />
-                </a>
-              ) : null}
-            </article>
-          </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="section" id="venue">
-        <div className="wrap">
-          <div className="section-head">
-            <h2>Live venue state</h2>
-            <p>
-              Read from chain accounts in your browser, not from our server. A venue whose
-              compliance posture is only as good as its own API has not really proved anything.
-            </p>
-          </div>
-          <div className="card">
-            <div className="card-head">
-              <span>Listed symbols</span>
-              <span className="count">
-                {rows ? `${rows.length} listed` : rowsError ? "unavailable" : "reading chain…"}
-              </span>
             </div>
-            {rows && rows.length > 0 ? (
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Symbol</th>
-                      <th>Status</th>
-                      <th>Cap usage</th>
-                      <th className="num">Prior month ADV</th>
-                      <th className="num">Cap</th>
-                      <th className="num">Breaches</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.address}>
-                        <td>
-                          <div className="ticker">{row.ticker}</div>
-                          <div className="sub">Tier {row.tier}</div>
-                        </td>
-                        <td>
-                          <Status status={row.status} />
-                          <div className="status-detail">{row.statusDetail}</div>
-                        </td>
-                        <td>
-                          <CapMeter row={row} />
-                        </td>
-                        <td className="num">{row.advShares.toLocaleString()} sh</td>
-                        <td className="num">{row.capShares.toLocaleString()} sh</td>
-                        <td className="num">{row.breachCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty">
-                {rowsError ? `Chain unavailable: ${rowsError}` : "Reading venue accounts…"}
-              </div>
-            )}
-          </div>
+            <div className="compare">
+              <article className="outcome outcome--leaked">
+                <div className="outcome-top">
+                  <CircleSlash size={15} color="var(--critical)" aria-hidden />
+                  <code>swap_unguarded</code>
+                </div>
+                <strong className="outcome-figure">{asMoney(unguardedHalt.received, "$29,120.56")}</strong>
+                <p>
+                  settled against a halted stock. This is not a strawman: it is how every AMM on
+                  Solana behaves today, because a pool cannot see a listing exchange.
+                </p>
+                {unguardedHalt.tx ? (
+                  <a className="link" href={String(unguardedHalt.tx)} target="_blank" rel="noreferrer">
+                    View transaction <ArrowUpRight size={13} />
+                  </a>
+                ) : null}
+              </article>
+
+              <article className="outcome outcome--blocked">
+                <div className="outcome-top">
+                  <ShieldCheck size={15} color="var(--good)" aria-hidden />
+                  <code>swap_guarded</code>
+                </div>
+                <strong className="outcome-figure">Reverted</strong>
+                <p>
+                  with <b>{String(guardedHalt.error ?? "SymbolHalted")}</b> (error{" "}
+                  {String(guardedHalt.error_number ?? 6000)}). The whole transaction rolled back and
+                  no funds moved.
+                </p>
+                {guardedHalt.tx ? (
+                  <a className="link" href={String(guardedHalt.tx)} target="_blank" rel="noreferrer">
+                    View reverted transaction <ArrowUpRight size={13} />
+                  </a>
+                ) : null}
+              </article>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       <section className="section" id="tape">
         <div className="wrap">
-          <div className="section-head">
-            <h2>The public tape</h2>
-            <p>
-              Rebuilt from chain logs on every request, so it is current to the last confirmed slot.
-              Served as machine readable JSON at <code>/api/tape</code>. Nothing here is
-              privileged: the same rows can be reconstructed by anyone reading the program's logs.
-            </p>
-          </div>
-          <div className="card">
-            <div className="card-head">
-              <span>Recent fills</span>
-              <a className="count" href="/api/tape" target="_blank" rel="noreferrer">
-                /api/tape
-              </a>
+          <Reveal>
+            <div className="section-head">
+              <h2>The public tape</h2>
+              <p>
+                Rebuilt from chain logs on every request, so it is current to the last confirmed
+                slot. Served as machine readable JSON at <code>/api/tape</code>. Nothing here is
+                privileged: anyone reading the program's logs can reconstruct the same rows.
+              </p>
             </div>
-            {tape && tape.length > 0 ? (
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Time (UTC)</th>
-                      <th>Symbol</th>
-                      <th>Side</th>
-                      <th className="num">Size</th>
-                      <th className="num">Price</th>
-                      <th className="num">Notional</th>
-                      <th className="num">Multiplier</th>
-                      <th>Tx</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tape.map((t) => (
-                      <tr key={t.signature + t.slot}>
-                        <td className="sub">{t.timestamp.replace("T", " ").replace(".000Z", "")}</td>
-                        <td className="ticker">
-                          {t.symbol}
-                          {t.cap_breach ? (
-                            <div className="status-detail" style={{ color: "var(--warning)" }}>
-                              cap breach
-                            </div>
-                          ) : null}
-                        </td>
-                        <td>{t.direction}</td>
-                        <td className="num">{t.size_shares.toFixed(5)}</td>
-                        <td className="num">${t.price_usd.toFixed(2)}</td>
-                        <td className="num">${t.notional_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                        <td className="num">{t.multiplier}</td>
-                        <td>
-                          <a className="link" href={EXPLORER("tx", t.signature)} target="_blank" rel="noreferrer">
-                            {t.signature.slice(0, 6)}… <ArrowUpRight size={12} />
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="card">
+              <div className="card-head">
+                <span>Recent fills</span>
+                <a className="count" href="/api/tape" target="_blank" rel="noreferrer">
+                  /api/tape
+                </a>
               </div>
-            ) : (
-              <div className="empty">{tape ? "No fills recorded yet." : "Rebuilding the tape…"}</div>
-            )}
-          </div>
+              {tape && tape.length > 0 ? (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Time (UTC)</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th className="num">Size</th>
+                        <th className="num">Price</th>
+                        <th className="num">Notional</th>
+                        <th className="num">Multiplier</th>
+                        <th>Tx</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tape.map((t) => (
+                        <tr key={t.signature + t.slot}>
+                          <td className="sub">{t.timestamp.replace("T", " ").replace(".000Z", "")}</td>
+                          <td className="ticker">
+                            {t.symbol}
+                            {t.cap_breach ? (
+                              <div className="status-detail" style={{ color: "var(--warning)" }}>
+                                cap breach
+                              </div>
+                            ) : null}
+                          </td>
+                          <td>{t.direction}</td>
+                          <td className="num">{t.size_shares.toFixed(5)}</td>
+                          <td className="num">${t.price_usd.toFixed(2)}</td>
+                          <td className="num">
+                            ${t.notional_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="num">{t.multiplier}</td>
+                          <td>
+                            <a className="link" href={EXPLORER("tx", t.signature)} target="_blank" rel="noreferrer">
+                              {t.signature.slice(0, 6)}… <ArrowUpRight size={12} />
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="empty">{tape ? "No fills recorded yet." : "Rebuilding the tape…"}</div>
+              )}
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -447,7 +292,7 @@ export default function App() {
                 <span>
                   <b>The cap is counted in shares, the tape in dollars.</b> Converting a raw token
                   amount into shares needs the multiplier actually in force, not the one in the
-                  obvious field. On the mint in this run those differ by{" "}
+                  obvious field. On the mint in the proof run those differ by{" "}
                   {String(multiplierStep.understatement_if_stored_field_is_read ?? "48.61%")}.
                 </span>
               </li>
@@ -469,20 +314,20 @@ export default function App() {
           <pre className="code">
             <code>
               <i>{"// Before the pool moves a single token.\n"}</i>
-              {"breaker::cpi::"}<b>check_and_record</b>{"(\n"}
-              {"    CpiContext::new_with_signer(\n"}
+              {"breaker::cpi::"}
+              <b>check_and_record</b>
+              {"(\n    CpiContext::new_with_signer(\n"}
               {"        ctx.accounts.breaker_program.key(),\n"}
               {"        breaker::cpi::accounts::CheckAndRecord {\n"}
               {"            venue, symbol, halt_state,\n"}
               {"            quote_asset, mint,\n"}
               {"            pool: ctx.accounts.pool.to_account_info(),\n"}
-              {"        },\n"}
-              {"        &[pool_seeds],\n"}
-              {"    ),\n"}
-              {"    base_amount,   "}<i>{"// equity token units"}</i>{"\n"}
-              {"    quote_amount,  "}<i>{"// what settled on the other side"}</i>{"\n"}
-              {"    side,\n"}
-              {")?;\n"}
+              {"        },\n        &[pool_seeds],\n    ),\n"}
+              {"    base_amount,   "}
+              <i>{"// equity token units"}</i>
+              {"\n    quote_amount,  "}
+              <i>{"// what settled on the other side"}</i>
+              {"\n    side,\n)?;\n"}
               <i>{"// Halted, stale, paused or over cap reverts the parent tx."}</i>
             </code>
           </pre>
@@ -508,33 +353,21 @@ export default function App() {
             <div>
               <h3>On chain</h3>
               <ul className="footer-list">
-                <li>
-                  <a href={EXPLORER("address", proof.breaker)} target="_blank" rel="noreferrer">
-                    <span>
-                      <span className="key">Breaker program</span>
-                      {proof.breaker.slice(0, 10)}…{proof.breaker.slice(-4)}
-                    </span>
-                    <ArrowUpRight size={12} />
-                  </a>
-                </li>
-                <li>
-                  <a href={EXPLORER("address", proof.reference_pool)} target="_blank" rel="noreferrer">
-                    <span>
-                      <span className="key">Reference pool</span>
-                      {proof.reference_pool.slice(0, 10)}…{proof.reference_pool.slice(-4)}
-                    </span>
-                    <ArrowUpRight size={12} />
-                  </a>
-                </li>
-                <li>
-                  <a href={EXPLORER("address", String(proof.venue ?? ""))} target="_blank" rel="noreferrer">
-                    <span>
-                      <span className="key">Venue</span>
-                      {String(proof.venue ?? "").slice(0, 10)}…{String(proof.venue ?? "").slice(-4)}
-                    </span>
-                    <ArrowUpRight size={12} />
-                  </a>
-                </li>
+                {[
+                  ["Breaker program", proof.breaker],
+                  ["Reference pool", proof.reference_pool],
+                  ["Reference venue", String(proof.venue ?? "")],
+                ].map(([label, id]) => (
+                  <li key={label}>
+                    <a href={EXPLORER("address", id)} target="_blank" rel="noreferrer">
+                      <span>
+                        <span className="key">{label}</span>
+                        {id.slice(0, 10)}…{id.slice(-4)}
+                      </span>
+                      <ArrowUpRight size={12} />
+                    </a>
+                  </li>
+                ))}
                 <li>
                   <a href="/api/tape" target="_blank" rel="noreferrer">
                     <span>
@@ -558,15 +391,16 @@ export default function App() {
                 </li>
                 <li>
                   <span>
-                    <span className="key">Attested inputs</span>
-                    Halt state and prior month volume are published by roles the venue nominates,
-                    because both originate off chain.
+                    <span className="key">Guard runs on devnet</span>
+                    Deliberately. An unaudited program that can block trades does not belong on
+                    mainnet. Mint data is read live from mainnet.
                   </span>
                 </li>
                 <li>
                   <span>
-                    <span className="key">Single venue</span>
-                    The order aggregates caps across affiliated venues. This enforces one.
+                    <span className="key">Attested inputs</span>
+                    Halt state and volume are published by roles the venue nominates. The program
+                    enforces their freshness and authority, not their truth.
                   </span>
                 </li>
               </ul>
@@ -574,8 +408,8 @@ export default function App() {
           </div>
 
           <div className="footer-base">
-            <span>Devnet deployment · not for production use</span>
-            <span>{String(capWalk.cap_shares ?? "")} share cap · Tier 1 · 0.25% of prior month ADV</span>
+            <span>Devnet deployment · not audited · not for production use</span>
+            <span>Tier 1 cap · 0.25% of prior month average daily volume</span>
           </div>
         </div>
       </footer>

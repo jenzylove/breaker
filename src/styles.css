@@ -8,7 +8,6 @@
 
   --surface: #fcfcfb;
   --plane: #f9f9f7;
-  --raised: #ffffff;
 
   --ink: #0b0b0b;
   --ink-2: #52514e;
@@ -16,10 +15,9 @@
 
   --grid: #e1e0d9;
   --rule: #c3c2b7;
-  --ring: rgba(11, 11, 11, 0.1);
 
   --accent: #2a78d6;
-  --accent-soft: #cde2fb;
+  --accent-ink: #ffffff;
 
   /* Reserved status palette. Always paired with an icon and a label. */
   --good: #0ca30c;
@@ -30,8 +28,9 @@
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --gutter: 16px;
-  --measure: 1180px;
+  --gutter: 28px;
+  --measure: 1240px;
+  --bar: 64px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -39,15 +38,12 @@
     color-scheme: dark;
     --surface: #1a1a19;
     --plane: #0d0d0d;
-    --raised: #222220;
     --ink: #ffffff;
     --ink-2: #c3c2b7;
     --muted: #898781;
     --grid: #2c2c2a;
     --rule: #383835;
-    --ring: rgba(255, 255, 255, 0.1);
     --accent: #3987e5;
-    --accent-soft: #184f95;
   }
 }
 
@@ -55,28 +51,24 @@
   color-scheme: dark;
   --surface: #1a1a19;
   --plane: #0d0d0d;
-  --raised: #222220;
   --ink: #ffffff;
   --ink-2: #c3c2b7;
   --muted: #898781;
   --grid: #2c2c2a;
   --rule: #383835;
-  --ring: rgba(255, 255, 255, 0.1);
   --accent: #3987e5;
-  --accent-soft: #184f95;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  margin: 0;
   background: var(--plane);
   color: var(--ink);
   font-family: var(--sans);
@@ -95,35 +87,60 @@ a {
   padding: 0 var(--gutter);
 }
 
+/* The hero's copy runs wider than the body measure. */
+.wrap-wide {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
 /* ------------------------------------------------------------ masthead */
 
 .masthead {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  height: var(--bar);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
   border-bottom: 1px solid var(--grid);
-  background: var(--surface);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
+/* Pinned to the real viewport edges, not inset to the body measure. */
 .masthead-inner {
+  height: 100%;
+  padding: 0 var(--gutter);
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 60px;
-  flex-wrap: wrap;
+  gap: 28px;
 }
 
 .wordmark {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  font-weight: 620;
-  letter-spacing: -0.015em;
-  font-size: 16px;
+  gap: 10px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  font-size: 17px;
 }
 
 .wordmark svg {
+  color: var(--accent);
   display: block;
+}
+
+.masthead-nav {
+  display: flex;
+  gap: 20px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.masthead-nav a {
+  text-decoration: none;
+}
+
+.masthead-nav a:hover {
   color: var(--accent);
 }
 
@@ -132,21 +149,26 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--muted);
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px;
+  padding: 5px 11px;
   border: 1px solid var(--grid);
   border-radius: 999px;
   background: var(--plane);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  text-decoration: none;
   white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--rule);
+  color: var(--ink-2);
 }
 
 .theme-toggle {
@@ -154,8 +176,8 @@ a {
   background: var(--plane);
   color: var(--ink-2);
   border-radius: 999px;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -168,113 +190,396 @@ a {
 /* ---------------------------------------------------------------- hero */
 
 .hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
   background: var(--surface);
   border-bottom: 1px solid var(--grid);
-  padding: 56px 0 48px;
+  padding-top: var(--bar);
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0 0 0 38%;
+  perspective: 1400px;
+  pointer-events: none;
+}
+
+.hero-scene {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.hero-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hero-guides {
+  stroke: var(--grid);
+}
+
+.hero-live {
+  stroke: var(--accent);
+}
+
+/* The branch about to be refused is fully live up to the gate. Tinting it
+   early would give away the outcome the gate is there to decide. */
+.hero-live--doomed {
+  stroke: var(--accent);
+}
+
+/* Past a tripped breaker nothing moved, so the conduit is drawn dead. */
+.hero-dead {
+  stroke: var(--rule);
+  stroke-dasharray: 2 18;
+  opacity: 0.8;
+}
+
+.hero-pulse {
+  fill: var(--accent);
+}
+
+.hero-pulse--stopped {
+  fill: var(--critical);
+}
+
+.gate-housing {
+  fill: var(--surface);
+  stroke: var(--grid);
+  stroke-width: 2;
+}
+
+.gate-node {
+  fill: var(--rule);
+}
+
+.gate-arm {
+  stroke: var(--accent);
+}
+
+.gate--tripped .gate-arm {
+  stroke: var(--critical);
+}
+
+.gate--tripped .gate-housing {
+  stroke: color-mix(in srgb, var(--critical) 38%, var(--grid));
+}
+
+.hero-label {
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--muted);
+}
+
+.hero-label--ok {
+  fill: var(--good);
+}
+
+.hero-label--stop {
+  fill: var(--critical);
+}
+
+/* The copy sits over the art, with a wash so it stays readable across it. */
+.hero-body {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 40px 0;
+}
+
+.hero-body::before {
+  content: "";
+  position: absolute;
+  inset: -40px 0;
+  background: linear-gradient(
+    to right,
+    var(--surface) 0%,
+    var(--surface) 30%,
+    color-mix(in srgb, var(--surface) 70%, transparent) 43%,
+    transparent 56%
+  );
+  pointer-events: none;
+}
+
+.hero-body > * {
+  position: relative;
 }
 
 .eyebrow {
   font-family: var(--mono);
   font-size: 11.5px;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--muted);
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 20px;
 }
 
 .hero h1 {
-  font-size: clamp(30px, 4.6vw, 46px);
-  line-height: 1.1;
-  letter-spacing: -0.028em;
-  font-weight: 640;
-  margin: 0 0 18px;
-  max-width: 19ch;
+  font-size: clamp(38px, 5.6vw, 78px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 660;
+  margin: 0 0 24px;
 }
 
-.hero p {
+.hero-body p {
   margin: 0;
-  max-width: 62ch;
+  max-width: 50ch;
   color: var(--ink-2);
-  font-size: 16.5px;
+  font-size: clamp(16px, 1.3vw, 19px);
 }
 
-.hero-lead {
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 34px;
+  flex-wrap: wrap;
+}
+
+.hero-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--grid);
+  background: var(--surface);
+  color: var(--muted);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
-  gap: 40px;
-  align-items: start;
+  place-items: center;
+  cursor: pointer;
+  z-index: 3;
+  animation: nudge 2.6s ease-in-out infinite;
 }
 
-.conditions {
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, 5px);
+  }
+}
+
+/* -------------------------------------------------------------- button */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9px;
+  border: 1px solid var(--grid);
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 560;
+  padding: 11px 18px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--rule);
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+.btn--small {
+  padding: 6px 11px;
+  font-size: 12.5px;
+  border-radius: 7px;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------- console */
+
+.console {
+  padding: 76px 0;
+  border-bottom: 1px solid var(--grid);
+  background: var(--plane);
+}
+
+.console-head {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.console-head h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -0.025em;
+  font-weight: 640;
+  margin: 0 0 10px;
+}
+
+.console-head p {
+  margin: 0;
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 11px;
+  padding: 14px 15px;
   border: 1px solid var(--grid);
   border-radius: 10px;
-  background: var(--plane);
-  padding: 16px 18px;
-}
-
-.conditions h2 {
-  font-size: 12px;
-  font-family: var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 12px;
-  font-weight: 500;
-}
-
-.conditions ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 11px;
-}
-
-.conditions li {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 10px;
+  background: var(--surface);
   font-size: 13.5px;
-  color: var(--ink-2);
-  line-height: 1.45;
+  transition: border-color 200ms ease;
 }
 
-.conditions li b {
-  color: var(--ink);
+.step b {
+  display: block;
   font-weight: 600;
 }
 
-.cond-num {
+.step-detail {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.step-n {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--muted);
   padding-top: 2px;
 }
 
+.step--now {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.step--now .step-n {
+  color: var(--accent);
+}
+
+.step--done .step-n {
+  color: var(--good);
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--grid);
+  background: var(--surface);
+  font-size: 13.5px;
+  margin-bottom: 20px;
+}
+
+.notice--ok {
+  border-color: color-mix(in srgb, var(--good) 40%, var(--grid));
+}
+
+.notice--bad {
+  border-color: color-mix(in srgb, var(--critical) 40%, var(--grid));
+}
+
+.notice a {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.row-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
 /* ------------------------------------------------------------- section */
 
 .section {
-  padding: 52px 0;
+  padding: 72px 0;
   border-bottom: 1px solid var(--grid);
+  background: var(--surface);
 }
 
 .section-head {
-  margin-bottom: 26px;
+  margin-bottom: 28px;
 }
 
 .section-head h2 {
-  font-size: clamp(21px, 2.6vw, 27px);
-  letter-spacing: -0.02em;
-  font-weight: 620;
-  margin: 0 0 8px;
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -0.025em;
+  font-weight: 640;
+  margin: 0 0 10px;
 }
 
 .section-head p {
   margin: 0;
   color: var(--ink-2);
-  max-width: 68ch;
-  font-size: 15px;
+  max-width: 70ch;
 }
 
 /* ---------------------------------------------------------------- card */
@@ -282,15 +587,37 @@ a {
 .card {
   background: var(--surface);
   border: 1px solid var(--grid);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+}
+
+.card--action {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 24px 26px;
+}
+
+.card--action h3 {
+  margin: 0 0 7px;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+}
+
+.card--action p {
+  margin: 0;
+  color: var(--ink-2);
+  max-width: 62ch;
+  font-size: 14px;
 }
 
 .card-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 13px 18px;
   border-bottom: 1px solid var(--grid);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -303,6 +630,15 @@ a {
   margin-left: auto;
   text-transform: none;
   letter-spacing: 0;
+  text-decoration: none;
+}
+
+.card-foot {
+  padding: 14px 18px;
+  border-top: 1px solid var(--grid);
+  color: var(--muted);
+  font-size: 12.5px;
+  background: var(--plane);
 }
 
 /* --------------------------------------------------------------- table */
@@ -325,13 +661,13 @@ th {
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 500;
-  padding: 9px 16px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--grid);
   white-space: nowrap;
 }
 
 td {
-  padding: 13px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--grid);
   vertical-align: middle;
 }
@@ -352,7 +688,7 @@ tbody tr:hover {
 }
 
 .ticker {
-  font-weight: 620;
+  font-weight: 640;
   letter-spacing: -0.01em;
 }
 
@@ -373,10 +709,6 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.status svg {
-  flex: none;
-}
-
 .status-trading {
   color: var(--good);
 }
@@ -394,18 +726,16 @@ tbody tr:hover {
   color: var(--muted);
 }
 
-/* Warning and serious sit below 3:1 on the light surface by design, so the
-   label carries the meaning and the colour only supports it. */
 .status-detail {
   color: var(--muted);
   font-size: 11.5px;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* --------------------------------------------------------------- meter */
 
 .meter {
-  min-width: 132px;
+  min-width: 140px;
 }
 
 .meter-track {
@@ -414,26 +744,28 @@ tbody tr:hover {
   border-radius: 4px;
   overflow: hidden;
   display: flex;
-  gap: 2px; /* surface gap between adjacent fills */
+  gap: 2px;
 }
 
 .meter-fill {
   background: var(--accent);
   border-radius: 4px;
   min-width: 3px;
+  transition: width 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .meter-over {
   background: var(--critical);
   border-radius: 4px;
   min-width: 3px;
+  transition: width 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .meter-label {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 5px;
+  margin-top: 6px;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: 11px;
@@ -444,18 +776,23 @@ tbody tr:hover {
 
 .compare {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .outcome {
   border: 1px solid var(--grid);
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 24px;
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
+  transition: transform 200ms ease;
+}
+
+.outcome:hover {
+  transform: translateY(-2px);
 }
 
 .outcome-top {
@@ -467,9 +804,9 @@ tbody tr:hover {
 }
 
 .outcome-figure {
-  font-size: clamp(24px, 3.4vw, 32px);
-  font-weight: 640;
-  letter-spacing: -0.025em;
+  font-size: clamp(26px, 3.6vw, 36px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
   line-height: 1.1;
 }
 
@@ -507,14 +844,14 @@ tbody tr:hover {
 
 .code {
   margin: 0;
-  padding: 18px 20px;
-  background: var(--surface);
+  padding: 20px 22px;
+  background: var(--plane);
   border: 1px solid var(--grid);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow-x: auto;
   font-family: var(--mono);
   font-size: 12.5px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--ink-2);
 }
 
@@ -531,7 +868,7 @@ tbody tr:hover {
 .two-col {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 32px;
+  gap: 36px;
   align-items: start;
 }
 
@@ -540,7 +877,7 @@ tbody tr:hover {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 12px;
+  gap: 13px;
 }
 
 .notes li {
@@ -565,220 +902,18 @@ tbody tr:hover {
   font-weight: 600;
 }
 
-/* -------------------------------------------------------------- footer */
-
-.footer {
-  padding: 30px 0 54px;
-  color: var(--muted);
-  font-size: 12.5px;
-}
-
-.footer-grid {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  align-items: baseline;
-}
-
-.footer a {
-  color: var(--ink-2);
-  text-decoration: none;
-  font-family: var(--mono);
-  font-size: 11.5px;
-}
-
-.footer a:hover {
-  text-decoration: underline;
-}
-
 .empty {
-  padding: 30px 16px;
+  padding: 34px 18px;
   text-align: center;
   color: var(--muted);
   font-size: 13.5px;
 }
 
-@media (max-width: 860px) {
-  .hero-lead,
-  .two-col {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 26px;
-  }
-  .hero {
-    padding: 38px 0 34px;
-  }
-  .section {
-    padding: 38px 0;
-  }
-}
-
-
-/* ------------------------------------------------------------ hero art */
-
-.art-stage {
-  perspective: 900px;
-  width: 100%;
-  max-width: 412px;
-}
-
-.art-scene {
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 340ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: transform;
-}
-
-.art-layer {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Back and mid planes are absolutely placed over the front one, which keeps
-   the stage's height honest, then pushed apart in z. */
-.art-layer--back,
-.art-layer--mid {
-  position: absolute;
-  inset: 0;
-}
-
-.art-layer--back {
-  transform: translateZ(-34px);
-  opacity: 0.85;
-}
-
-.art-layer--mid {
-  transform: translateZ(-14px);
-}
-
-.art-layer--front {
-  position: relative;
-  transform: translateZ(16px);
-}
-
-.art-guides {
-  stroke: var(--grid);
-}
-
-.art-live {
-  stroke: var(--accent);
-}
-
-/* Past a tripped breaker nothing moved, so the conduit is drawn dead. */
-.art-dead {
-  stroke: var(--rule);
-  stroke-dasharray: 3 6;
-  opacity: 0.75;
-}
-
-.art-pulse {
-  fill: var(--accent);
-}
-
-.art-pulse--stopped {
-  fill: var(--critical);
-}
-
-.brk-housing {
-  fill: var(--surface);
-  stroke: var(--grid);
-  stroke-width: 1;
-}
-
-.brk-node {
-  fill: var(--rule);
-}
-
-.brk-arm {
-  stroke: var(--accent);
-}
-
-.brk--tripped .brk-arm {
-  stroke: var(--critical);
-}
-
-.brk--tripped .brk-housing {
-  stroke: color-mix(in srgb, var(--critical) 32%, var(--grid));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .art-scene {
-    transition: none;
-  }
-  .art-pulse {
-    display: none;
-  }
-}
-
-/* --------------------------------------------------------- scroll reveal */
-
-.reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  transition:
-    opacity 520ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.reveal.is-in {
-  opacity: 1;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
-/* Rows settle in sequence rather than all at once. */
-tbody tr {
-  animation: row-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-
-@keyframes row-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  tbody tr {
-    animation: none;
-  }
-}
-
-.meter-fill,
-.meter-over {
-  transition: width 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.outcome,
-.card,
-.chip,
-.link {
-  transition:
-    border-color 200ms ease,
-    transform 200ms ease;
-}
-
-.outcome:hover {
-  transform: translateY(-2px);
-}
-
 /* -------------------------------------------------------------- footer */
 
 .footer {
-  padding: 46px 0 56px;
+  padding: 52px 0 60px;
   background: var(--surface);
-  border-top: 1px solid var(--grid);
   color: var(--ink-2);
   font-size: 13.5px;
 }
@@ -786,7 +921,7 @@ tbody tr {
 .footer-cols {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
-  gap: 34px;
+  gap: 36px;
   align-items: start;
 }
 
@@ -797,11 +932,11 @@ tbody tr {
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 500;
-  margin: 0 0 12px;
+  margin: 0 0 13px;
 }
 
 .footer p {
-  margin: 0 0 10px;
+  margin: 0 0 11px;
   max-width: 46ch;
   line-height: 1.6;
 }
@@ -811,7 +946,7 @@ tbody tr {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 9px;
+  gap: 11px;
 }
 
 .footer-list li > a,
@@ -823,8 +958,7 @@ tbody tr {
   text-decoration: none;
 }
 
-/* A link carries a trailing icon, so it is a flex row with the text block
-   taking the remaining width. */
+/* A link carries a trailing icon, so it is a flex row. */
 .footer-list li > a {
   display: flex;
   align-items: flex-start;
@@ -843,14 +977,14 @@ tbody tr {
   display: block;
 }
 
+.footer-list a:hover {
+  color: var(--accent);
+}
+
 .footer-list svg {
   flex: none;
   margin-top: 3px;
   opacity: 0.55;
-}
-
-.footer-list a:hover {
-  color: var(--accent);
 }
 
 .footer-list .key {
@@ -859,12 +993,12 @@ tbody tr {
   font-size: 10.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .footer-base {
-  margin-top: 34px;
-  padding-top: 18px;
+  margin-top: 36px;
+  padding-top: 20px;
   border-top: 1px solid var(--grid);
   display: flex;
   gap: 16px;
@@ -875,12 +1009,166 @@ tbody tr {
   color: var(--muted);
 }
 
+/* -------------------------------------------------------------- motion */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 560ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+tbody tr {
+  animation: row-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  tbody tr {
+    animation: none;
+  }
+  .hero-scene {
+    transition: none;
+  }
+  .hero-scroll {
+    animation: none;
+  }
+  .hero-pulse {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------- wallet adapter skin */
+
+.wallet-adapter-button {
+  font-family: var(--sans) !important;
+  font-size: 14px !important;
+  font-weight: 560 !important;
+  height: auto !important;
+  padding: 11px 18px !important;
+  border-radius: 9px !important;
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  line-height: 1.2 !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: color-mix(in srgb, var(--accent) 88%, #000) !important;
+}
+
+.wallet-adapter-button-start-icon,
+.wallet-adapter-button-end-icon {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* ----------------------------------------------------------- responsive */
+
+@media (max-width: 1080px) {
+  .hero-art {
+    inset: auto 0 0 0;
+    height: 46%;
+    opacity: 0.5;
+  }
+  .hero-body::before {
+    background: linear-gradient(
+      to bottom,
+      var(--surface) 0%,
+      var(--surface) 62%,
+      transparent 100%
+    );
+  }
+}
+
 @media (max-width: 860px) {
+  :root {
+    --gutter: 18px;
+  }
+  .masthead-nav {
+    display: none;
+  }
+  .two-col,
   .footer-cols {
     grid-template-columns: minmax(0, 1fr);
     gap: 26px;
   }
-  .art-stage {
-    max-width: 100%;
+  .console,
+  .section {
+    padding: 48px 0;
   }
+  .console-head {
+    flex-direction: column;
+  }
+}
+
+/* ---------------------------------------------------------- conditions */
+
+.conditions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.condition {
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  padding: 22px 22px 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.condition-n {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.condition h3 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.015em;
+  font-weight: 620;
+}
+
+.condition p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* What Breaker does about it, set apart from what the order says. */
+.condition-do {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--grid);
+  color: var(--ink) !important;
+  font-size: 13px !important;
 }
