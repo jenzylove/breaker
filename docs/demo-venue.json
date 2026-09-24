@@ -1,0 +1,52 @@
+{
+  "cluster": "https://api.devnet.solana.com",
+  "breaker": "EdTGUwJPq5RNy4RjLRzKYbajtkDzaim3MYiPi8yB9obe",
+  "reference_pool": "4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU",
+  "venue": "HbAjsRcNtzgGSVCAdCyyeB5Mn5yCDVU4WdZvpZaixKiS",
+  "authority": "ECXUxKxBKEMz3kLN2pDYBKRhNPvfdy3E55pLhkpVBgse",
+  "quote_mint": "8J5D475qKYPBkVJeARek5AcJRkVUG6W8DyctpZtjNZFb",
+  "quote_asset": "Ay3g42itcsB3fe4rVwbTNxr4sQmZ5RxBbfLEjgMbpLWW",
+  "listings": [
+    {
+      "ticker": "TSLAx",
+      "name": "Tesla",
+      "state": "trading",
+      "mint": "6hCrY31wVyJa4Yb2EbtP3nxWwSjU3Hfk76zq5CuwiiZU",
+      "symbol": "2YiGGU6ze6bMQ5AVA8zC2DN9Rj7Tz7EYEiwDVmQnb9qy",
+      "halt_state": "ZfnsPSHqaEV2pvvkpj5CLtPF6U3zpmeNcndTxDQniTL",
+      "pool": "46UWgU8rHherWwkUuRrygufeStpr52cgrqyQda6jm3Up",
+      "adv_shares": 90000
+    },
+    {
+      "ticker": "NVDAx",
+      "name": "NVIDIA",
+      "state": "halted",
+      "mint": "6iNDZjtLMctPiu1urdMyVkQEMbpZuWh1QXFUVD6LyUVv",
+      "symbol": "EuRqwACdf7vrwLpc15fGwdumAEtgBh59prZTHmVgRfop",
+      "halt_state": "EczQ7uk55tF1fapXYNRJS441N9ETsHN4CHL6sKVofuVe",
+      "pool": "FwPBmg7pTrELdHZLT17JPRtyQSEzbcJ3r7srYngKEL1n",
+      "adv_shares": 180000
+    },
+    {
+      "ticker": "AAPLx",
+      "name": "Apple",
+      "state": "capped",
+      "mint": "9v8PHVAR3575gp5js22XGksz7Qng4xzX9vSu1JjjoEEu",
+      "symbol": "rWCanahmNR4poBXvy5EcEys3T7Jksf3FuMfnVKR16ST",
+      "halt_state": "5nqWyQe9sQYiM2eWEr6rmuJYCsoENqujPHjs82Vv885b",
+      "pool": null,
+      "adv_shares": 60000
+    },
+    {
+      "ticker": "SPYx",
+      "name": "S&P 500",
+      "state": "trading",
+      "mint": "JEAW6ndpP6LaPaurmNFjHWdw5bXE9RbWSjZSGTzzZSUJ",
+      "symbol": "DLwdQYwCxxecPPPAUeYt3AFk1AhFBVgsQb8ciagk8Tro",
+      "halt_state": "9uu3JaYGt25QF4WkHkRhdGCTK7tGh5dSVMNupqmY6mpU",
+      "pool": null,
+      "adv_shares": 45000
+    }
+  ],
+  "seeded_at": "2026-09-24T16:07:07.122Z"
+}

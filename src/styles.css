@@ -477,126 +477,6 @@ a {
   }
 }
 
-/* ------------------------------------------------------------- console */
-
-.console {
-  padding: 76px 0;
-  border-bottom: 1px solid var(--grid);
-  background: var(--plane);
-}
-
-.console-head {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 30px;
-}
-
-.console-head h2 {
-  font-size: clamp(24px, 3vw, 34px);
-  letter-spacing: -0.025em;
-  font-weight: 640;
-  margin: 0 0 10px;
-}
-
-.console-head p {
-  margin: 0;
-  color: var(--ink-2);
-  max-width: 62ch;
-}
-
-.steps {
-  list-style: none;
-  margin: 0 0 26px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-}
-
-.step {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 11px;
-  padding: 14px 15px;
-  border: 1px solid var(--grid);
-  border-radius: 10px;
-  background: var(--surface);
-  font-size: 13.5px;
-  transition: border-color 200ms ease;
-}
-
-.step b {
-  display: block;
-  font-weight: 600;
-}
-
-.step-detail {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 3px;
-}
-
-.step-n {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-  padding-top: 2px;
-}
-
-.step--now {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
-.step--now .step-n {
-  color: var(--accent);
-}
-
-.step--done .step-n {
-  color: var(--good);
-}
-
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 13px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--grid);
-  background: var(--surface);
-  font-size: 13.5px;
-  margin-bottom: 20px;
-}
-
-.notice--ok {
-  border-color: color-mix(in srgb, var(--good) 40%, var(--grid));
-}
-
-.notice--bad {
-  border-color: color-mix(in srgb, var(--critical) 40%, var(--grid));
-}
-
-.notice a {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--accent);
-  font-family: var(--mono);
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.row-actions {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
 /* ------------------------------------------------------------- section */
 
 .section {
@@ -949,106 +829,6 @@ tbody tr:hover {
   font-size: 13.5px;
 }
 
-/* -------------------------------------------------------------- footer */
-
-.footer {
-  padding: 52px 0 60px;
-  background: var(--surface);
-  color: var(--ink-2);
-  font-size: 13.5px;
-}
-
-.footer-cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
-  gap: 36px;
-  align-items: start;
-}
-
-.footer h3 {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 500;
-  margin: 0 0 13px;
-}
-
-.footer p {
-  margin: 0 0 11px;
-  max-width: 46ch;
-  line-height: 1.6;
-}
-
-.footer-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 11px;
-}
-
-.footer-list li > a,
-.footer-list li > span {
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--ink-2);
-  text-decoration: none;
-}
-
-/* A link carries a trailing icon, so it is a flex row. */
-.footer-list li > a {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.footer-list li > a > span {
-  display: block;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* A plain entry has no icon. Leaving it flex would make the label and the
-   text two columns instead of two lines. */
-.footer-list li > span {
-  display: block;
-}
-
-.footer-list a:hover {
-  color: var(--accent);
-}
-
-.footer-list svg {
-  flex: none;
-  margin-top: 3px;
-  opacity: 0.55;
-}
-
-.footer-list .key {
-  color: var(--muted);
-  display: block;
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-bottom: 3px;
-}
-
-.footer-base {
-  margin-top: 36px;
-  padding-top: 20px;
-  border-top: 1px solid var(--grid);
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--muted);
-}
-
 /* -------------------------------------------------------------- motion */
 
 .reveal {
@@ -1102,30 +882,6 @@ tbody tr {
   }
 }
 
-/* -------------------------------------------------- wallet adapter skin */
-
-.wallet-adapter-button {
-  font-family: var(--sans) !important;
-  font-size: 14px !important;
-  font-weight: 560 !important;
-  height: auto !important;
-  padding: 11px 18px !important;
-  border-radius: 9px !important;
-  background: var(--accent) !important;
-  color: var(--accent-ink) !important;
-  line-height: 1.2 !important;
-}
-
-.wallet-adapter-button:not([disabled]):hover {
-  background: color-mix(in srgb, var(--accent) 88%, #000) !important;
-}
-
-.wallet-adapter-button-start-icon,
-.wallet-adapter-button-end-icon {
-  width: 18px !important;
-  height: 18px !important;
-}
-
 /* ----------------------------------------------------------- responsive */
 
 @media (max-width: 1080px) {
@@ -1165,104 +921,291 @@ tbody tr {
   }
 }
 
-/* ---------------------------------------------------------- conditions */
+/* ---------------------------------------------------------------- demo */
 
-.conditions {
+.demo {
+  padding: 78px 0;
+  background: var(--plane);
+  border-bottom: 1px solid var(--grid);
+}
+
+.board {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stock {
+  background: var(--surface);
+  border: 1px solid var(--grid);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition:
+    border-color 200ms ease,
+    transform 200ms ease;
+}
+
+.stock:hover {
+  transform: translateY(-2px);
+}
+
+/* The border carries the state, so a halted stock is visible before reading. */
+.stock--stop {
+  border-color: color-mix(in srgb, var(--critical) 42%, var(--grid));
+}
+
+.stock--warn {
+  border-color: color-mix(in srgb, var(--warning) 48%, var(--grid));
+}
+
+.stock header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stock-ticker {
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.stock-name {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+
+/* Status always carries an icon and words, never colour alone. */
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 580;
+  text-align: right;
+  line-height: 1.3;
+}
+
+.verdict--go {
+  color: var(--good);
+}
+.verdict--stop {
+  color: var(--critical);
+}
+.verdict--warn {
+  color: var(--warning);
+}
+.verdict--muted {
+  color: var(--muted);
+}
+
+.stock-limit .meter-track {
+  height: 7px;
+}
+
+.stock-note {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.stock .btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: auto;
+}
+
+/* --------------------------------------------------------- the outcome */
+
+.result {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 22px 24px;
+  border-radius: 14px;
+  border: 1px solid var(--grid);
+  background: var(--surface);
+  margin-bottom: 22px;
+}
+
+.result--stopped {
+  border-color: color-mix(in srgb, var(--good) 45%, var(--grid));
+}
+
+.result--through {
+  border-color: color-mix(in srgb, var(--critical) 45%, var(--grid));
+}
+
+.result-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.result--stopped .result-mark {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+}
+
+.result--through .result-mark {
+  background: color-mix(in srgb, var(--critical) 14%, transparent);
+  color: var(--critical);
+}
+
+.result h3 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+
+.result p {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  font-size: 14px;
+  max-width: 62ch;
+}
+
+/* The same trade with nothing checking it, set apart from the board. */
+.compare-run {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 22px 24px;
+  border-radius: 14px;
+  border: 1px dashed var(--rule);
+  background: transparent;
+}
+
+.compare-run h3 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  letter-spacing: -0.015em;
+}
+
+.compare-run p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  max-width: 60ch;
+}
+
+/* --------------------------------------------------------------- rules */
+
+.rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 18px;
 }
 
-.condition {
+.rule {
   border: 1px solid var(--grid);
-  border-radius: 12px;
-  padding: 22px 22px 20px;
+  border-radius: 14px;
+  padding: 22px;
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
-.condition-n {
+.rule-n {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
 
-.condition h3 {
+.rule h3 {
   margin: 0;
   font-size: 17px;
   letter-spacing: -0.015em;
   font-weight: 620;
 }
 
-.condition p {
+.rule p {
   margin: 0;
   color: var(--ink-2);
   font-size: 13.5px;
   line-height: 1.6;
 }
 
-/* What Breaker does about it, set apart from what the order says. */
-.condition-do {
-  margin-top: auto;
+/* What a pool cannot do about it, set apart from what the rule says. */
+.rule-gap {
+  margin-top: auto !important;
   padding-top: 12px;
   border-top: 1px solid var(--grid);
-  color: var(--ink) !important;
-  font-size: 13px !important;
+  color: var(--muted) !important;
+  font-size: 12.5px !important;
 }
 
-/* The bar floats clear over the hero scene, then takes a surface. */
-.masthead {
-  background: transparent;
-  backdrop-filter: none;
-  border-bottom-color: transparent;
-  transition:
-    background 260ms ease,
-    border-color 260ms ease,
-    backdrop-filter 260ms ease;
+.rules-foot {
+  margin: 24px 0 0;
+  font-size: 15px;
+  color: var(--ink);
+  max-width: 76ch;
+  line-height: 1.6;
 }
 
-.masthead--solid {
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: saturate(160%) blur(12px);
-  border-bottom-color: var(--grid);
+/* -------------------------------------------------------------- footer */
+
+.footer {
+  padding: 34px 0 44px;
+  background: var(--surface);
+  border-top: 1px solid var(--grid);
+  color: var(--muted);
+  font-size: 13px;
 }
 
-/* Over the scene the bar wears the hero's ink, not the page's. */
-.masthead:not(.masthead--solid) .wordmark,
-.masthead:not(.masthead--solid) .masthead-nav a {
-  color: #10141c;
+.footer-row {
+  display: flex;
+  gap: 26px;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
-.masthead:not(.masthead--solid) .wordmark svg {
-  color: #10141c;
+.footer-row p {
+  margin: 0;
+  max-width: 66ch;
+  line-height: 1.6;
 }
 
-.masthead:not(.masthead--solid) .chip {
-  background: rgba(255, 255, 255, 0.4);
-  border-color: rgba(28, 38, 58, 0.18);
-  color: rgba(28, 38, 58, 0.7);
-  backdrop-filter: blur(10px);
+.footer-links {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
-.masthead:not(.masthead--solid) .theme-toggle {
-  background: rgba(255, 255, 255, 0.4);
-  border-color: rgba(28, 38, 58, 0.18);
-  color: rgba(28, 38, 58, 0.75);
-  backdrop-filter: blur(10px);
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 12.5px;
 }
 
-:root[data-theme="dark"] .masthead:not(.masthead--solid) .wordmark,
-:root[data-theme="dark"] .masthead:not(.masthead--solid) .wordmark svg,
-:root[data-theme="dark"] .masthead:not(.masthead--solid) .masthead-nav a {
-  color: #f7f9fd;
+.footer-links a:hover {
+  color: var(--accent);
 }
 
-:root[data-theme="dark"] .masthead:not(.masthead--solid) .chip,
-:root[data-theme="dark"] .masthead:not(.masthead--solid) .theme-toggle {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(226, 232, 244, 0.22);
-  color: rgba(226, 232, 244, 0.8);
+@media (max-width: 860px) {
+  .demo {
+    padding: 48px 0;
+  }
+  .compare-run,
+  .footer-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

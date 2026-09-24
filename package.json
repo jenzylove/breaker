@@ -13,10 +13,6 @@
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.14",
-    "@solana/wallet-adapter-base": "^0.9.28",
-    "@solana/wallet-adapter-react": "^0.15.40",
-    "@solana/wallet-adapter-react-ui": "^0.9.40",
-    "@solana/wallet-adapter-wallets": "^0.19.39",
     "@solana/web3.js": "^1.98.4",
     "buffer": "^6.0.3",
     "lucide-react": "^0.468.0",
@@ -28,9 +24,13 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/three": "^0.186.0",
+    "@vercel/node": "^14.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "~5.7.2",
     "vite": "^6.0.7",
     "vitest": "^2.1.8"
+  },
+  "overrides": {
+    "uuid": "9.0.1"
   }
 }

@@ -1,8 +1,8 @@
 import { Suspense, lazy } from "react";
 
-// Three is a heavy dependency, so the scene is split out and loaded after the
-// copy paints. Until it arrives, and on any device without WebGL, the
-// atmospheric ground underneath stands on its own.
+// Three is heavy, so the scene is split out and loaded after the copy paints.
+// Until it arrives, and on any device without WebGL, the gradient ground
+// underneath stands on its own.
 const HeroScene = lazy(() => import("./HeroScene"));
 
 export default function Hero({ onEnter }: { onEnter: () => void }) {
@@ -15,24 +15,24 @@ export default function Hero({ onEnter }: { onEnter: () => void }) {
       <div className="hero-body">
         <div className="wrap-wide">
           <h1>
-            <span className="thin">Tokenized stocks trade</span>
+            <span className="thin">Stock tokens don't know</span>
             <br />
-            on chain now.
+            when trading halts.
           </h1>
           <div className="hero-lede">
             <span className="hero-rule" />
             <p>
-              Under conditions <b>no liquidity pool meets</b>. It cannot see a halt, cannot count
-              its volume against a regulatory cap, and publishes no tape. Breaker is the call a
-              venue makes before it settles.
+              Tesla, NVIDIA and Apple now trade on Solana around the clock. When the real exchange
+              halts one of them, the pool has no idea and keeps filling orders.{" "}
+              <b>Breaker is the check that stops it.</b>
             </p>
           </div>
           <div className="hero-actions">
             <button className="pill pill--solid" onClick={onEnter}>
-              Connect wallet
+              Watch it stop a trade
             </button>
-            <a className="pill" href="#proof">
-              Watch demo
+            <a className="pill" href="#rules">
+              Why this matters
             </a>
           </div>
         </div>
