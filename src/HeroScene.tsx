@@ -2,47 +2,55 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-// A real-time WebGL scene.
+// A real-time WebGL scene: a dense cluster of glass drifting through a warm
+// shaft of light.
 //
-// The composition is a field of glass: spheres and flat lenses scattered in
-// depth, with one marble carrying the eye. Everything uses a physical
-// transmission material, so the glass genuinely refracts what is behind it
-// rather than being a light coloured gradient standing in for refraction.
+// Glass is a physical transmission material, so it genuinely refracts the
+// ground behind it. The flat lenses are what make the composition read, and
+// they only work with a bright rim: a thin disc with a dull edge is
+// indistinguishable from the background.
 //
-// It reads as our product without being a diagram: fills drifting through a
-// venue, one of them caught inside a ring.
+// It carries our meaning without being a diagram. Fills drift through a venue,
+// and one is caught inside the single warm ring in the scene.
 
 interface Piece {
-  kind: "sphere" | "lens" | "ring";
+  kind: "sphere" | "lens" | "ring" | "wire";
   pos: [number, number, number];
   size: number;
-  /** Tilt for lenses and rings. */
   rot?: [number, number, number];
   /** Far pieces are frosted, which reads as depth without a bokeh pass. */
   frost?: number;
   tint?: string;
+  /** Wires only. */
+  len?: number;
 }
 
+// A tight overlapping cluster, not a scatter. Density is what gives the
+// reference its depth; spreading the same objects out flattens it.
 const PIECES: Piece[] = [
-  // Foreground glass, scattered across the right half.
-  { kind: "sphere", pos: [2.35, 1.45, 1.5], size: 0.34, frost: 0.05 },
-  { kind: "sphere", pos: [4.15, 0.95, -0.4], size: 0.46, frost: 0.03 },
-  { kind: "sphere", pos: [1.55, -1.5, 0.9], size: 0.26, frost: 0.18 },
-  { kind: "sphere", pos: [3.5, -1.85, 0.8], size: 0.2, frost: 0.22 },
-  { kind: "sphere", pos: [5.0, -1.25, 0.6], size: 0.55, frost: 0.04 },
-  { kind: "sphere", pos: [4.6, 2.05, 0.9], size: 0.17, frost: 0.26 },
-  { kind: "sphere", pos: [0.85, 1.85, -0.8], size: 0.22, frost: 0.3 },
+  // Large lenses, overlapping. The signature element.
+  { kind: "lens", pos: [3.15, 0.35, 1.0], size: 1.5, rot: [1.18, 0.3, -0.5] },
+  { kind: "lens", pos: [4.45, 1.2, 0.1], size: 1.15, rot: [1.32, -0.25, 0.42] },
+  { kind: "lens", pos: [2.25, -0.95, 0.5], size: 1.05, rot: [1.05, 0.62, 0.22] },
+  { kind: "lens", pos: [5.05, -0.55, -0.5], size: 0.88, rot: [1.26, 0.12, -0.34] },
+  { kind: "lens", pos: [3.6, 1.95, -0.9], size: 0.72, rot: [1.2, -0.48, 0.18], frost: 0.12 },
+  { kind: "lens", pos: [1.75, 1.15, -1.3], size: 0.95, rot: [1.3, 0.2, 0.6], frost: 0.16 },
 
-  // Flat lenses, the signature of the reference. Thin discs caught at angles.
-  { kind: "lens", pos: [2.9, 0.55, 0.35], size: 1.15, rot: [1.15, 0.35, -0.42] },
-  { kind: "lens", pos: [4.75, 1.75, -0.7], size: 0.78, rot: [1.35, -0.2, 0.55] },
-  { kind: "lens", pos: [1.95, -0.85, -0.5], size: 0.92, rot: [1.05, 0.6, 0.28] },
-  { kind: "lens", pos: [5.35, -0.15, -0.9], size: 0.62, rot: [1.28, 0.1, -0.3] },
-  { kind: "lens", pos: [3.15, 2.25, -1.2], size: 0.55, rot: [1.2, -0.45, 0.2], frost: 0.2 },
+  // Spheres woven through them.
+  { kind: "sphere", pos: [2.5, 1.5, 1.4], size: 0.38, frost: 0.02 },
+  { kind: "sphere", pos: [4.5, 0.15, 1.2], size: 0.3, frost: 0.02 },
+  { kind: "sphere", pos: [1.85, -1.75, 0.8], size: 0.26, frost: 0.12 },
+  { kind: "sphere", pos: [4.9, 1.85, 0.5], size: 0.22, frost: 0.18 },
+  { kind: "sphere", pos: [5.3, -1.5, 0.9], size: 0.44, frost: 0.03 },
+  { kind: "sphere", pos: [3.05, -1.9, -0.2], size: 0.2, frost: 0.22 },
+  { kind: "sphere", pos: [1.35, 0.25, 1.6], size: 0.16, frost: 0.05 },
 
-  // The one warm element: a ring holding a fill. The only colour that is not
-  // cool in the whole scene, which is why the eye lands on it.
-  { kind: "ring", pos: [3.05, -0.35, 1.3], size: 0.62, rot: [1.12, 0.2, -0.35], tint: "#e07a68" },
+  // Thin wires. Quiet, but they tie the cluster together.
+  { kind: "wire", pos: [3.4, 1.0, -0.4], size: 0.008, len: 4.2, rot: [0.3, 0.2, 0.75] },
+  { kind: "wire", pos: [4.2, -0.6, 0.2], size: 0.006, len: 3.4, rot: [0.1, -0.3, -0.5] },
+
+  // The one warm object. Everything else is cool, so the eye lands here.
+  { kind: "ring", pos: [2.85, -0.45, 1.75], size: 0.6, rot: [1.1, 0.22, -0.32], tint: "#e0705a" },
 ];
 
 export default function HeroScene() {
@@ -68,101 +76,124 @@ export default function HeroScene() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    // Held below 1. The earlier pass was exposed so hot that the glass washed
+    // out against the ground and the lenses disappeared entirely.
+    renderer.toneMappingExposure = 0.92;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
-      40,
+      38,
       container.clientWidth / container.clientHeight,
       0.1,
       100,
     );
-    camera.position.set(1.6, 0, 8.2);
-    camera.lookAt(2.9, 0, 0);
+    camera.position.set(1.9, 0.1, 7.1);
+    camera.lookAt(3.3, 0.05, 0.4);
 
-    // The environment is what the glass reflects and refracts. Without one a
-    // transmission material renders as flat grey.
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
+    const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.02).texture;
     scene.environment = envTexture;
 
     const group = new THREE.Group();
+    // Shifted clear of the headline. The cluster wants to sit right of the
+    // copy, not across it.
+    group.position.x = 0.55;
     scene.add(group);
 
-    const glass = (frost = 0.05, tint?: string) =>
+    const glass = (frost = 0.03, tint?: string) =>
       new THREE.MeshPhysicalMaterial({
         transmission: 1,
-        thickness: 0.55,
-        roughness: 0.015 + frost,
-        ior: 1.5,
+        thickness: 0.42,
+        roughness: 0.012 + frost,
+        ior: 1.52,
         clearcoat: 1,
-        clearcoatRoughness: 0.02 + frost * 0.5,
+        clearcoatRoughness: 0.015 + frost * 0.4,
         metalness: 0,
         iridescence: 1,
-        iridescenceIOR: 1.9,
-        iridescenceThicknessRange: [140, 560],
+        iridescenceIOR: 2.0,
+        iridescenceThicknessRange: [160, 680],
         color: new THREE.Color("#ffffff"),
-        attenuationColor: new THREE.Color(tint ?? "#cfe0fb"),
-        attenuationDistance: tint ? 1.2 : 6.5,
-        envMapIntensity: 2.1,
+        attenuationColor: new THREE.Color(tint ?? "#c4d8f7"),
+        attenuationDistance: tint ? 1.0 : 7.5,
+        envMapIntensity: 2.6,
         specularIntensity: 1,
         transparent: true,
       });
 
     const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
-    const lensGeo = new THREE.CylinderGeometry(1, 1, 0.045, 96, 1);
-    const ringGeo = new THREE.TorusGeometry(1, 0.075, 32, 160);
+    const lensGeo = new THREE.CylinderGeometry(1, 1, 0.032, 128, 1);
+    const ringGeo = new THREE.TorusGeometry(1, 0.07, 32, 180);
+    const wireGeo = new THREE.CylinderGeometry(1, 1, 1, 12, 1);
 
     const floaters: { mesh: THREE.Object3D; phase: number; amp: number }[] = [];
 
     for (const piece of PIECES) {
-      const geo =
-        piece.kind === "sphere" ? sphereGeo : piece.kind === "lens" ? lensGeo : ringGeo;
-      const mesh = new THREE.Mesh(geo, glass(piece.frost ?? 0.05, piece.tint));
+      let mesh: THREE.Mesh;
+
+      if (piece.kind === "wire") {
+        mesh = new THREE.Mesh(
+          wireGeo,
+          new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color("#ffffff"),
+            roughness: 0.08,
+            metalness: 0.2,
+            transmission: 0.6,
+            thickness: 0.2,
+            envMapIntensity: 2.4,
+            transparent: true,
+            opacity: 0.75,
+          }),
+        );
+        mesh.scale.set(piece.size, piece.len ?? 3, piece.size);
+      } else {
+        const geo =
+          piece.kind === "sphere" ? sphereGeo : piece.kind === "lens" ? lensGeo : ringGeo;
+        mesh = new THREE.Mesh(geo, glass(piece.frost ?? 0.03, piece.tint));
+        mesh.scale.setScalar(piece.size);
+      }
+
       mesh.position.set(...piece.pos);
-      mesh.scale.setScalar(piece.size);
       if (piece.rot) mesh.rotation.set(...piece.rot);
       group.add(mesh);
       floaters.push({
         mesh,
         phase: Math.random() * Math.PI * 2,
-        amp: 0.05 + Math.random() * 0.09,
+        amp: piece.kind === "wire" ? 0.02 : 0.04 + Math.random() * 0.07,
       });
 
-      // The warm ring holds a fill, which is the whole point of the scene.
       if (piece.kind === "ring") {
         const caught = new THREE.Mesh(
           sphereGeo,
           new THREE.MeshPhysicalMaterial({
             color: new THREE.Color("#e2705c"),
-            roughness: 0.08,
+            roughness: 0.07,
             metalness: 0,
             clearcoat: 1,
-            clearcoatRoughness: 0.04,
-            transmission: 0.55,
-            thickness: 0.5,
+            clearcoatRoughness: 0.03,
+            transmission: 0.5,
+            thickness: 0.45,
             ior: 1.45,
-            iridescence: 0.8,
+            iridescence: 0.75,
             attenuationColor: new THREE.Color("#c8452f"),
-            attenuationDistance: 0.9,
-            envMapIntensity: 1.8,
+            attenuationDistance: 0.8,
+            envMapIntensity: 2.2,
             transparent: true,
           }),
         );
         caught.position.set(...piece.pos);
-        caught.scale.setScalar(piece.size * 0.52);
+        caught.scale.setScalar(piece.size * 0.5);
         group.add(caught);
-        floaters.push({ mesh: caught, phase: floaters[floaters.length - 1].phase, amp: 0.05 });
+        floaters.push({ mesh: caught, phase: floaters[floaters.length - 1].phase, amp: 0.04 });
       }
     }
 
     /* ----------------------------------------------------------- the marble */
 
-    // The focal point. Marbling is a surface property, not a shape, so it is
-    // painted procedurally and mapped onto the core. An earlier attempt used a
-    // torus knot for the swirl and read as a white pretzel suspended in a ball.
+    // Marbling is a surface property, not a shape, so it is painted to a canvas
+    // and mapped. An earlier attempt used a torus knot for the swirl and read
+    // as a white pretzel suspended in a ball.
     const marbleTexture = (() => {
       const size = 512;
       const canvas = document.createElement("canvas");
@@ -170,10 +201,9 @@ export default function HeroScene() {
       canvas.height = size;
       const ctx = canvas.getContext("2d")!;
 
-      ctx.fillStyle = "#122f9e";
+      ctx.fillStyle = "#07208c";
       ctx.fillRect(0, 0, size, size);
 
-      // Layered soft blobs read as depth in the glass once lit.
       const blob = (x: number, y: number, r: number, colour: string, alpha: number) => {
         const g = ctx.createRadialGradient(x, y, 0, x, y, r);
         g.addColorStop(0, colour);
@@ -185,26 +215,25 @@ export default function HeroScene() {
         ctx.fill();
       };
 
-      for (let i = 0; i < 26; i += 1) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        const r = 40 + Math.random() * 170;
-        const warm = Math.random() > 0.72;
+      // Deep blue first, so the lighter veins sit on saturation rather than
+      // washing the whole sphere out.
+      for (let i = 0; i < 16; i += 1) {
         blob(
-          x,
-          y,
-          r,
-          warm ? "rgba(255,238,228,0.9)" : "rgba(235,244,255,0.85)",
-          0.14 + Math.random() * 0.3,
+          Math.random() * size,
+          Math.random() * size,
+          70 + Math.random() * 170,
+          "rgba(4,22,120,1)",
+          0.4 + Math.random() * 0.4,
         );
       }
-      for (let i = 0; i < 12; i += 1) {
+      for (let i = 0; i < 18; i += 1) {
+        const warm = Math.random() > 0.78;
         blob(
           Math.random() * size,
           Math.random() * size,
-          60 + Math.random() * 150,
-          "rgba(20,60,210,0.95)",
-          0.2 + Math.random() * 0.3,
+          35 + Math.random() * 120,
+          warm ? "rgba(255,226,206,0.95)" : "rgba(150,210,255,0.95)",
+          0.12 + Math.random() * 0.3,
         );
       }
       ctx.globalAlpha = 1;
@@ -217,47 +246,48 @@ export default function HeroScene() {
     })();
 
     const marble = new THREE.Group();
-    marble.position.set(3.85, 0.25, 1.1);
+    marble.position.set(3.75, 0.3, 1.45);
     group.add(marble);
 
     const core = new THREE.Mesh(
       sphereGeo,
       new THREE.MeshPhysicalMaterial({
         map: marbleTexture,
-        roughness: 0.24,
-        metalness: 0.12,
+        roughness: 0.2,
+        metalness: 0.1,
         clearcoat: 1,
-        clearcoatRoughness: 0.08,
-        iridescence: 0.9,
-        iridescenceIOR: 2,
-        iridescenceThicknessRange: [200, 680],
-        envMapIntensity: 1.35,
+        clearcoatRoughness: 0.06,
+        // Held well down. At full strength the iridescence bleached the blue to
+        // lavender and the marble stopped being the focal point.
+        iridescence: 0.35,
+        iridescenceIOR: 1.6,
+        iridescenceThicknessRange: [200, 520],
+        envMapIntensity: 1.15,
       }),
     );
-    core.scale.setScalar(0.52);
+    core.scale.setScalar(0.58);
     marble.add(core);
 
-    // A clear shell just proud of the core, so there is a band of glass and a
-    // highlight sitting over the marbling.
-    const shell = new THREE.Mesh(sphereGeo, glass(0.01));
-    shell.scale.setScalar(0.6);
+    const shell = new THREE.Mesh(sphereGeo, glass(0.008));
+    shell.scale.setScalar(0.66);
     marble.add(shell);
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.5);
+    const key = new THREE.DirectionalLight(0xffffff, 1.35);
     key.position.set(-4, 3.2, 5);
     scene.add(key);
-    const warm = new THREE.DirectionalLight(0xffcfae, 1.1);
-    warm.position.set(4.5, -2, 3);
+    // The warm shaft the composition sits in.
+    const warm = new THREE.DirectionalLight(0xffb98c, 1.5);
+    warm.position.set(4.5, -2.2, 2.6);
     scene.add(warm);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
     /* ------------------------------------------------------------- motion */
 
     const pointer = { x: 0, y: 0 };
     const target = { x: 0, y: 0 };
     const onPointer = (event: PointerEvent) => {
-      target.x = (event.clientX / window.innerWidth - 0.5) * 0.5;
-      target.y = (event.clientY / window.innerHeight - 0.5) * 0.34;
+      target.x = (event.clientX / window.innerWidth - 0.5) * 0.44;
+      target.y = (event.clientY / window.innerHeight - 0.5) * 0.3;
     };
     if (!reduced) window.addEventListener("pointermove", onPointer, { passive: true });
 
@@ -292,14 +322,13 @@ export default function HeroScene() {
 
       if (!reduced) {
         floaters.forEach((f, i) => {
-          f.mesh.position.y = baseY[i] + Math.sin(t * 0.42 + f.phase) * f.amp;
-          f.mesh.rotation.z += 0.0009;
+          f.mesh.position.y = baseY[i] + Math.sin(t * 0.38 + f.phase) * f.amp;
+          f.mesh.rotation.z += 0.0007;
         });
-        marble.rotation.y = t * 0.16;
-        marble.position.y = 0.25 + Math.sin(t * 0.5) * 0.08;
-
-        group.rotation.y = pointer.x * 0.35;
-        group.rotation.x = pointer.y * 0.3;
+        marble.rotation.y = t * 0.14;
+        marble.position.y = 0.3 + Math.sin(t * 0.46) * 0.07;
+        group.rotation.y = pointer.x * 0.3;
+        group.rotation.x = pointer.y * 0.26;
       }
 
       renderer.render(scene, camera);

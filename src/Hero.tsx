@@ -14,7 +14,6 @@ export default function Hero({ onEnter }: { onEnter: () => void }) {
 
       <div className="hero-body">
         <div className="wrap-wide">
-          <span className="eyebrow">SEC Innovation Exemption · effective 17 September 2026</span>
           <h1>
             <span className="thin">Tokenized stocks trade</span>
             <br />

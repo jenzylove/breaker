@@ -198,30 +198,32 @@ a {
   align-items: center;
   overflow: hidden;
   isolation: isolate;
-  /* Silver ground with a warm streak sweeping behind the glass, which is what
-     the refraction has to pick up. A flat fill gives the material nothing. */
+  /* Darker and cooler than it looks it should be. The glass only reads against
+     a ground with some weight; a pale field washes the refraction out. The warm
+     shaft cuts through the middle, which is what the lenses pick up. */
   background:
-    linear-gradient(107deg, transparent 28%, rgba(255, 214, 184, 0.5) 42%, rgba(255, 236, 222, 0.24) 52%, transparent 64%),
-    radial-gradient(60% 50% at 78% 22%, rgba(214, 226, 246, 0.72), transparent 66%),
-    radial-gradient(70% 60% at 22% 84%, rgba(206, 212, 224, 0.6), transparent 68%),
-    linear-gradient(168deg, #d6dae1 0%, #c3c9d4 46%, #b4bbc8 100%);
+    linear-gradient(104deg, transparent 22%, rgba(255, 186, 142, 0.62) 40%, rgba(255, 214, 184, 0.34) 50%, transparent 66%),
+    radial-gradient(56% 48% at 74% 20%, rgba(186, 202, 226, 0.6), transparent 68%),
+    radial-gradient(64% 58% at 20% 88%, rgba(126, 134, 150, 0.5), transparent 70%),
+    linear-gradient(165deg, #b3b9c3 0%, #9aa1ad 48%, #868e9c 100%);
 }
 
-:root[data-theme="dark"] .hero {
+:root[data-theme="dark"] .hero,
+:root:not([data-theme="light"]) .hero.is-dark {
   background:
-    linear-gradient(107deg, transparent 28%, rgba(168, 104, 74, 0.34) 42%, rgba(140, 96, 76, 0.16) 52%, transparent 64%),
-    radial-gradient(60% 50% at 78% 22%, rgba(48, 66, 100, 0.66), transparent 66%),
-    radial-gradient(70% 60% at 22% 84%, rgba(30, 34, 44, 0.7), transparent 68%),
-    linear-gradient(168deg, #1b1e25 0%, #16181e 46%, #101216 100%);
+    linear-gradient(104deg, transparent 22%, rgba(176, 106, 68, 0.42) 40%, rgba(150, 100, 76, 0.2) 50%, transparent 66%),
+    radial-gradient(56% 48% at 74% 20%, rgba(52, 70, 104, 0.6), transparent 68%),
+    radial-gradient(64% 58% at 20% 88%, rgba(22, 26, 34, 0.7), transparent 70%),
+    linear-gradient(165deg, #1a1d24 0%, #14171d 48%, #0e1014 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .hero {
     background:
-      linear-gradient(107deg, transparent 28%, rgba(168, 104, 74, 0.34) 42%, rgba(140, 96, 76, 0.16) 52%, transparent 64%),
-      radial-gradient(60% 50% at 78% 22%, rgba(48, 66, 100, 0.66), transparent 66%),
-      radial-gradient(70% 60% at 22% 84%, rgba(30, 34, 44, 0.7), transparent 68%),
-      linear-gradient(168deg, #1b1e25 0%, #16181e 46%, #101216 100%);
+      linear-gradient(104deg, transparent 22%, rgba(176, 106, 68, 0.42) 40%, rgba(150, 100, 76, 0.2) 50%, transparent 66%),
+      radial-gradient(56% 48% at 74% 20%, rgba(52, 70, 104, 0.6), transparent 68%),
+      radial-gradient(64% 58% at 20% 88%, rgba(22, 26, 34, 0.7), transparent 70%),
+      linear-gradient(165deg, #1a1d24 0%, #14171d 48%, #0e1014 100%);
   }
 }
 
@@ -235,10 +237,10 @@ a {
   pointer-events: none;
   background: radial-gradient(
     110% 92% at -12% 50%,
-    rgba(232, 235, 240, 0.94) 0%,
-    rgba(232, 235, 240, 0.76) 26%,
-    rgba(232, 235, 240, 0.34) 44%,
-    rgba(232, 235, 240, 0) 62%
+    rgba(206, 211, 219, 0.95) 0%,
+    rgba(206, 211, 219, 0.82) 26%,
+    rgba(206, 211, 219, 0.4) 46%,
+    rgba(206, 211, 219, 0) 64%
   );
 }
 
