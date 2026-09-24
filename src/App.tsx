@@ -57,24 +57,27 @@ function ago(seconds: number): string {
   return `${Math.round(minutes / 60)}h ago`;
 }
 
+// Each rule says what the order requires and why a pool fails it, then what
+// Breaker does about it. The intro already says a pool cannot meet these, so
+// the failure is not relabelled on every step.
 const RULES = [
   {
     title: "Stop when the exchange stops",
     plain:
-      "If Nasdaq halts a stock, every venue trading its token has to halt it too, at the same moment.",
-    gap: "A liquidity pool never closes. It has no way of knowing Nasdaq did anything.",
+      "If Nasdaq halts a stock, every venue trading its token has to halt it too, at the same moment. The issuer's halt does not reach the chain on its own: on 24 September, none of the seven stocks xStocks had halted was paused on Solana, so their tokens could still be traded anywhere.",
+    breaker: "Breaker refuses the trade while the stock is halted, and also if the halt feed goes quiet.",
   },
   {
     title: "Stay under a daily limit",
     plain:
-      "A venue may only trade a small slice of what the stock normally trades in a day. Go over twice and that stock is frozen for three months.",
-    gap: "A pool does not count its own volume, and has no idea what the limit is.",
+      "A venue may only trade a small slice of what the stock normally trades in a day. Go over twice and that stock is frozen for three months. A pool does not count its own volume and has no idea what the limit is.",
+    breaker: "Breaker counts every trade and refuses the one that would cross the limit a second time.",
   },
   {
     title: "Publish every trade",
     plain:
-      "Every fill has to be public within ten minutes, in dollars, with the time, size and direction.",
-    gap: "A pool emits raw token amounts, which is none of those things.",
+      "Every trade has to be public within ten minutes, in dollars, with its time, size and direction. A pool only emits raw token amounts.",
+    breaker: "Breaker writes that record inside the trade itself, so it cannot be skipped.",
   },
 ];
 
@@ -88,10 +91,7 @@ function Rules() {
           <div className="rule-body">
             <h3>{rule.title}</h3>
             <p>{rule.plain}</p>
-            <p className="rule-gap">
-              <span>A pool cannot do this</span>
-              {rule.gap}
-            </p>
+            <p className="rule-answer">{rule.breaker}</p>
           </div>
         </li>
       ))}

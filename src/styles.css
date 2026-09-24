@@ -2455,3 +2455,13 @@ tr.is-mine td {
     height: 330px;
   }
 }
+
+/* What Breaker does about each rule: one accented line, not a repeated label. */
+.rule-answer {
+  margin-top: 12px !important;
+  padding-left: 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink) !important;
+  font-weight: 500;
+  font-size: 14.5px !important;
+}

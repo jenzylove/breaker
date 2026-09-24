@@ -97,6 +97,11 @@ Solana mint, and each entry carries the issuer's own `isTradingHalted` flag and 
 If the registry cannot be read, it publishes nothing, the feed ages past its tolerance, and Breaker
 refuses trades rather than guessing.
 
+An issuer halt does not reach the chain by itself. On 24 September 2026 xStocks had seven stocks
+halted, and none of their mints had the Token-2022 pause set, so each token stayed freely tradable in
+any pool. [`scripts/check-issuer-pause.mjs`](scripts/check-issuer-pause.mjs) re-runs that check
+against mainnet.
+
 The site's coverage table reads the same registry live ([`api/stocks.ts`](api/stocks.ts)), so the
 halted count on the page is the issuer's count, not ours.
 
