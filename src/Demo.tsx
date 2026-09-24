@@ -188,23 +188,31 @@ export default function Demo() {
                     {v.label}
                   </span>
                 </header>
-                <div className="stock-limit">
-                  <div className="meter-track">
-                    <div className="meter-fill" style={{ width: `${used * 100}%` }} />
-                    {over > 0 ? (
-                      <div className="meter-over" style={{ width: `${over * 100}%` }} />
-                    ) : null}
+                {row && row.status === "paused" ? (
+                  <p className="stock-frozen">
+                    Went over its daily limit twice, so it cannot trade for three months. That is
+                    the penalty the order sets.
+                  </p>
+                ) : (
+                  <div className="stock-limit">
+                    <span className="stock-limit-label">How much it may still trade today</span>
+                    <div className="meter-track">
+                      <div className="meter-fill" style={{ width: `${used * 100}%` }} />
+                      {over > 0 ? (
+                        <div className="meter-over" style={{ width: `${over * 100}%` }} />
+                      ) : null}
+                    </div>
+                    <div className="meter-label">
+                      <span>
+                        {row
+                          ? `${Math.round(row.headroomShares).toLocaleString()} of ${Math.round(row.capShares).toLocaleString()} shares left`
+                          : readFailed
+                            ? "unavailable"
+                            : "reading…"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="meter-label">
-                    <span>
-                      {row
-                        ? `${(row.capUsed * 100).toFixed(0)}% of today's limit used`
-                        : readFailed
-                          ? "unavailable"
-                          : "reading…"}
-                    </span>
-                  </div>
-                </div>
+                )}
               </article>
             );
           })}

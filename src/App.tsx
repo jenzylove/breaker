@@ -79,6 +79,7 @@ export default function App() {
   const { theme, toggle } = useTheme();
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
   const [tapeIncomplete, setTapeIncomplete] = useState(false);
+  const [tapeUnread, setTapeUnread] = useState(0);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -95,12 +96,18 @@ export default function App() {
         .then((r) => r.json())
         .then((d) => {
           if (cancelled) return;
-          setTape(d.transactions ?? []);
-          setTapeIncomplete(d.complete === false);
+          const rows = (d.transactions ?? []) as TapeEntry[];
+          // Never replace rows we already have with fewer. A refresh that hits
+          // a rate limit should not make the record appear to shrink.
+          setTape((previous) => (previous && rows.length < previous.length ? previous : rows));
+          setTapeIncomplete(d.complete === false && rows.length === 0);
+          setTapeUnread(typeof d.unread === "number" ? d.unread : 0);
         })
-        .catch(() => !cancelled && setTape([]));
+        .catch(() => !cancelled && setTape((previous) => previous ?? []));
     load();
-    const id = setInterval(load, 25_000);
+    // Slow. Hammering a public node is what caused the flicker in the first
+    // place, and a trade record does not need second-by-second refresh.
+    const id = setInterval(load, 90_000);
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -155,16 +162,21 @@ export default function App() {
                 on its own.
               </p>
             </div>
-            <div className="rules">
+            <ol className="rules">
               {RULES.map((rule) => (
-                <article className="rule" key={rule.n}>
-                  <span className="rule-n">{rule.n}</span>
-                  <h3>{rule.title}</h3>
-                  <p>{rule.plain}</p>
-                  <p className="rule-gap">{rule.gap}</p>
-                </article>
+                <li className="rule" key={rule.n}>
+                  <span className="rule-dot" aria-hidden />
+                  <div className="rule-body">
+                    <h3>{rule.title}</h3>
+                    <p>{rule.plain}</p>
+                    <p className="rule-gap">
+                      <span>A pool cannot do this</span>
+                      {rule.gap}
+                    </p>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ol>
             <p className="rules-foot">
               Breaker is the check that sits in front of the pool. Before a trade settles, the pool
               asks it. If the stock is halted or the limit is gone, the whole trade is cancelled and
@@ -202,16 +214,17 @@ export default function App() {
             <div className="card">
               <div className="card-head">
                 <span>Trades on the demo exchange</span>
+                {tape && tape.length > 0 ? (
+                  <span className="tape-count">
+                    {tapeUnread > 0
+                      ? `showing ${tape.length} of ${tape.length + tapeUnread}, the public node would not serve the rest`
+                      : `all ${tape.length} recorded`}
+                  </span>
+                ) : null}
                 <a className="count" href="/api/tape" target="_blank" rel="noreferrer">
                   raw data
                 </a>
               </div>
-              {tapeIncomplete && tape && tape.length > 0 ? (
-                <div className="tape-warning">
-                  This list is incomplete. The blockchain node rate limited us, so some trades
-                  could not be read. What is shown is real; it is not all of it.
-                </div>
-              ) : null}
               {tape && tape.length > 0 ? (
                 <div className="table-scroll">
                   <table>
@@ -264,7 +277,7 @@ export default function App() {
                   {!tape
                     ? "Reading the blockchain…"
                     : tapeIncomplete
-                      ? "The blockchain could not be read in full just now. Retrying."
+                      ? "The public blockchain node is rate limiting us. Trades will appear shortly."
                       : "No trades yet. Run one above and it will appear here."}
                 </div>
               )}

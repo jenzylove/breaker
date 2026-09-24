@@ -273,6 +273,10 @@ a {
   position: relative;
   z-index: 2;
   width: 100%;
+  /* The hero is a flex container and flex items default to min-width:auto,
+     so without this the copy refuses to shrink below its intrinsic width and
+     runs off the right edge on a phone. */
+  min-width: 0;
   padding: calc(var(--bar) + 40px) 0 40px;
 }
 
@@ -316,6 +320,7 @@ a {
 .hero-lede {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
+  min-width: 0;
   gap: 18px;
   align-items: start;
   max-width: 580px;
@@ -907,6 +912,14 @@ tbody tr {
   .masthead-nav {
     display: none;
   }
+  /* The decorative rule costs a phone a quarter of its measure. */
+  .hero-lede {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .hero-rule {
+    display: none;
+  }
   .two-col,
   .footer-cols {
     grid-template-columns: minmax(0, 1fr);
@@ -1023,58 +1036,91 @@ tbody tr {
 
 /* --------------------------------------------------------------- rules */
 
+/* A downward sequence, not three parallel boxes. The rules happen in order
+   and the connecting line says so. */
 .rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 18px;
+  /* No gap: the spacing is the item's own padding, so the connecting line has
+     a continuous run to cover rather than a gap it cannot reach across. */
+  gap: 0;
+  max-width: 82ch;
 }
 
 .rule {
-  border: 1px solid var(--grid);
-  border-radius: 14px;
-  padding: 22px;
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 22px;
+  padding-bottom: 40px;
 }
 
-.rule-n {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+.rule:last-child {
+  padding-bottom: 0;
 }
 
-.rule h3 {
-  margin: 0;
-  font-size: 17px;
-  letter-spacing: -0.015em;
+/* The line runs from each dot to the next, so it stops at the last one. */
+.rule:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 22px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--grid);
+}
+
+.rule-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.rule-body h3 {
+  margin: 0 0 8px;
+  font-size: clamp(17px, 1.9vw, 21px);
+  letter-spacing: -0.018em;
   font-weight: 620;
 }
 
-.rule p {
+.rule-body p {
   margin: 0;
   color: var(--ink-2);
-  font-size: 13.5px;
-  line-height: 1.6;
+  font-size: 14.5px;
+  line-height: 1.65;
+  max-width: 70ch;
 }
 
-/* What a pool cannot do about it, set apart from what the rule says. */
+/* What a pool cannot do about it, labelled so it is not mistaken for more
+   of the rule. */
 .rule-gap {
-  margin-top: auto !important;
-  padding-top: 12px;
-  border-top: 1px solid var(--grid);
+  margin-top: 12px !important;
   color: var(--muted) !important;
-  font-size: 12.5px !important;
+  font-size: 13.5px !important;
+}
+
+.rule-gap span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rule);
+  margin-bottom: 4px;
 }
 
 .rules-foot {
-  margin: 24px 0 0;
+  margin: 34px 0 0;
   font-size: 15px;
   color: var(--ink);
   max-width: 76ch;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* -------------------------------------------------------------- footer */
@@ -1451,4 +1497,40 @@ tbody tr {
   color: var(--muted) !important;
   font-size: 13px !important;
   max-width: 76ch;
+}
+
+/* A stock that cannot trade at all has no headroom to draw. */
+.stock-frozen {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.stock-limit-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* How much of the record is actually shown. Stated permanently and quietly,
+   because a banner that appears and disappears on every poll reads as a bug. */
+.tape-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.tape-count + .count {
+  margin-left: 18px;
 }
