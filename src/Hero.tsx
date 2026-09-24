@@ -1,104 +1,81 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown } from "lucide-react";
 
-// Two fills entering on the same rail and parting at the gate.
+// An atmospheric scene rather than a diagram.
 //
-// The upper one clears a closed breaker and settles. The lower one meets a
-// tripped breaker: its pulse stops dead at the contact and the conduit past it
-// is drawn as dead line, because nothing moved. The divergence is the product.
+// The spheres are fills and the rings are breakers. One fill drifts cleanly
+// through an open ring. One is held at a closed one, which carries the only
+// warm colour in the scene. Nothing here is ornament: the composition says the
+// same thing the program does.
 //
-// Depth is real rather than shaded: rails, gates and pulses sit on separate
-// planes under a perspective transform and separate as the pointer moves.
+// Built entirely from gradients and transforms, so it scales to any viewport
+// and themes with the rest of the page instead of being a flat asset.
 
-const RAIL_IN = "M -40 300 L 210 300";
-const RAIL_UP = "M 210 300 L 330 170 L 560 170";
-const RAIL_DOWN_LIVE = "M 210 300 L 330 430 L 452 430";
-const RAIL_DOWN_DEAD = "M 452 430 L 760 430";
-const RAIL_UP_TAIL = "M 560 170 L 760 170";
-
-function Gate({ x, y, tripped }: { x: number; y: number; tripped: boolean }) {
-  return (
-    <g transform={`translate(${x} ${y})`} className={tripped ? "gate gate--tripped" : "gate"}>
-      <rect x={-54} y={-54} width={108} height={108} rx={20} className="gate-housing" />
-      <circle cx={-30} cy={0} r={6} className="gate-node" />
-      <circle cx={30} cy={0} r={6} className="gate-node" />
-      <line
-        className="gate-arm"
-        x1={-30}
-        y1={0}
-        x2={tripped ? 16 : 30}
-        y2={tripped ? -34 : 0}
-        strokeWidth={6}
-        strokeLinecap="round"
-      />
-    </g>
-  );
+interface Body {
+  /** Percentage position within the stage. */
+  x: number;
+  y: number;
+  size: number;
+  /** Parallax weight. Far objects move less and blur more. */
+  depth: number;
+  kind: "glass" | "core" | "ring" | "held";
+  delay: number;
 }
 
-function useTilt(max = 6) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+const BODIES: Body[] = [
+  { x: 62, y: 46, size: 30, depth: 1, kind: "core", delay: 0 },
+  { x: 40, y: 22, size: 9, depth: 0.55, kind: "glass", delay: -3 },
+  { x: 84, y: 24, size: 6.5, depth: 0.4, kind: "glass", delay: -6 },
+  { x: 33, y: 72, size: 7.5, depth: 0.5, kind: "glass", delay: -9 },
+  { x: 90, y: 70, size: 11, depth: 0.7, kind: "glass", delay: -2 },
+  { x: 52, y: 84, size: 5, depth: 0.3, kind: "glass", delay: -7 },
+  { x: 46, y: 36, size: 26, depth: 0.8, kind: "ring", delay: -1 },
+  { x: 74, y: 74, size: 18, depth: 0.6, kind: "held", delay: -5 },
+];
 
+function useParallax(strength = 26) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const onMove = (event: PointerEvent) => {
-      const dx = event.clientX / window.innerWidth - 0.5;
-      const dy = event.clientY / window.innerHeight - 0.5;
-      setTilt({ x: -dy * max, y: dx * max });
+      setOffset({
+        x: (event.clientX / window.innerWidth - 0.5) * strength,
+        y: (event.clientY / window.innerHeight - 0.5) * strength,
+      });
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => window.removeEventListener("pointermove", onMove);
-  }, [max]);
-
-  return { ref, tilt };
+  }, [strength]);
+  return offset;
 }
 
-export function HeroArt() {
-  const { ref, tilt } = useTilt();
+function Scene() {
+  const offset = useParallax();
+  const ref = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="hero-art" ref={ref} aria-hidden>
-      <div
-        className="hero-scene"
-        style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
-      >
-        <svg className="hero-svg" viewBox="0 0 760 600" preserveAspectRatio="xMidYMid slice">
-          {/* back plane: the venue's quiet bus */}
-          <g className="hero-guides" fill="none" strokeWidth={2}>
-            <path d="M -40 232 L 150 232 L 250 120 L 760 120" />
-            <path d="M -40 368 L 150 368 L 250 490 L 760 490" />
-            <path d="M -40 300 L 760 300" strokeDasharray="2 14" />
-          </g>
-
-          <path d={RAIL_DOWN_DEAD} className="hero-dead" fill="none" strokeWidth={7} strokeLinecap="round" />
-
-          <g className="hero-rails" fill="none" strokeWidth={7} strokeLinecap="round" strokeLinejoin="round">
-            <path d={RAIL_IN} className="hero-live" />
-            <path d={RAIL_UP} className="hero-live" />
-            <path d={RAIL_UP_TAIL} className="hero-live" />
-            <path d={RAIL_DOWN_LIVE} className="hero-live hero-live--doomed" />
-          </g>
-
-          <circle r={9} className="hero-pulse">
-            <animateMotion dur="4.2s" repeatCount="indefinite" path={`${RAIL_IN} ${RAIL_UP.slice(1)}`} />
-          </circle>
-          <circle r={9} className="hero-pulse hero-pulse--stopped">
-            <animateMotion
-              dur="4.2s"
-              repeatCount="indefinite"
-              path={`${RAIL_IN} ${RAIL_DOWN_LIVE.slice(1)}`}
-              keyPoints="0;1;1"
-              keyTimes="0;0.62;1"
-              calcMode="linear"
-            />
-          </circle>
-
-          <Gate x={452} y={170} tripped={false} />
-          <Gate x={452} y={430} tripped />
-
-          <text x={528} y={128} className="hero-label hero-label--ok">settled</text>
-          <text x={528} y={508} className="hero-label hero-label--stop">refused</text>
-        </svg>
-      </div>
+    <div className="scene" ref={ref} aria-hidden>
+      <div className="scene-wash" />
+      {BODIES.map((b, i) => (
+        <div
+          key={i}
+          className={`body body--${b.kind}`}
+          style={
+            {
+              left: `${b.x}%`,
+              top: `${b.y}%`,
+              "--size": `${b.size}vmax`,
+              "--delay": `${b.delay}s`,
+              transform: `translate(-50%, -50%) translate3d(${offset.x * b.depth}px, ${
+                offset.y * b.depth
+              }px, 0)`,
+              filter: b.depth < 0.5 ? `blur(${(0.5 - b.depth) * 14}px)` : undefined,
+              opacity: b.depth < 0.5 ? 0.75 : 1,
+            } as React.CSSProperties
+          }
+        >
+          {b.kind === "held" ? <span className="body-caught" /> : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -106,33 +83,33 @@ export function HeroArt() {
 export default function Hero({ onEnter }: { onEnter: () => void }) {
   return (
     <section className="hero">
-      <HeroArt />
+      <Scene />
       <div className="hero-body">
         <div className="wrap-wide">
           <span className="eyebrow">SEC Innovation Exemption · effective 17 September 2026</span>
           <h1>
-            Tokenized stocks can trade
-            <br /> on chain now. On conditions
-            <br /> no AMM meets.
+            <span className="thin">Tokenized stocks trade</span>
+            <br />
+            on chain now.
           </h1>
-          <p>
-            A liquidity pool cannot see that Nasdaq halted a stock, cannot count its own volume
-            against a regulatory cap, and publishes no dollar tape. Breaker is the call a venue
-            makes before it settles.
-          </p>
+          <div className="hero-lede">
+            <span className="hero-rule" />
+            <p>
+              Under conditions <b>no liquidity pool meets</b>. It cannot see a halt, cannot count
+              its volume against a regulatory cap, and publishes no tape. Breaker is the call a
+              venue makes before it settles.
+            </p>
+          </div>
           <div className="hero-actions">
-            <button className="btn btn--primary" onClick={onEnter}>
+            <button className="pill pill--solid" onClick={onEnter}>
               Open the venue console
             </button>
-            <a className="btn btn--ghost" href="#proof">
+            <a className="pill" href="#proof">
               See it refuse a trade
             </a>
           </div>
         </div>
       </div>
-      <button className="hero-scroll" onClick={onEnter} aria-label="Scroll to the console">
-        <ArrowDown size={16} />
-      </button>
     </section>
   );
 }

@@ -189,125 +189,212 @@ a {
 
 /* ---------------------------------------------------------------- hero */
 
+/* An atmospheric ground rather than a flat panel. Three offset radial fields
+   stand in for a lit environment, which is what makes the glass read. */
 .hero {
   position: relative;
   min-height: 100svh;
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: var(--surface);
-  border-bottom: 1px solid var(--grid);
-  padding-top: var(--bar);
+  isolation: isolate;
+  background:
+    radial-gradient(70% 55% at 12% 8%, rgba(255, 226, 214, 0.55), transparent 60%),
+    radial-gradient(75% 65% at 88% 30%, rgba(196, 214, 244, 0.75), transparent 62%),
+    radial-gradient(120% 110% at 62% 78%, #aab4c6 0%, #b9c2d1 38%, #ccd3de 100%);
 }
 
-.hero-art {
+:root[data-theme="dark"] .hero {
+  background:
+    radial-gradient(70% 55% at 12% 8%, rgba(120, 78, 64, 0.35), transparent 60%),
+    radial-gradient(75% 65% at 88% 30%, rgba(44, 66, 104, 0.8), transparent 62%),
+    radial-gradient(120% 110% at 62% 78%, #14161c 0%, #1b1e26 42%, #252a34 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero {
+    background:
+      radial-gradient(70% 55% at 12% 8%, rgba(120, 78, 64, 0.35), transparent 60%),
+      radial-gradient(75% 65% at 88% 30%, rgba(44, 66, 104, 0.8), transparent 62%),
+      radial-gradient(120% 110% at 62% 78%, #14161c 0%, #1b1e26 42%, #252a34 100%);
+  }
+}
+
+.scene {
   position: absolute;
-  inset: 0 0 0 38%;
-  perspective: 1400px;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
+  perspective: 1200px;
 }
 
-.hero-scene {
-  width: 100%;
-  height: 100%;
+/* A fine grain over the gradient stops it banding on wide screens. */
+.scene-wash {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+
+.body {
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  animation: drift 11s ease-in-out infinite;
+  animation-delay: var(--delay);
+  will-change: transform, translate;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2.2vmax;
+  }
+}
+
+/* Glass: a tight specular highlight, a cool refraction low and opposite, a warm
+   rim from the environment, and a contact shadow well below. */
+.body--glass,
+.body--core {
+  background:
+    radial-gradient(circle at 33% 26%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.4) 11%, rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 74% 80%, rgba(118, 168, 255, 0.6) 0%, rgba(118, 168, 255, 0) 56%),
+    radial-gradient(circle at 82% 20%, rgba(255, 186, 148, 0.42) 0%, rgba(255, 186, 148, 0) 46%),
+    linear-gradient(152deg, rgba(255, 255, 255, 0.62), rgba(150, 170, 206, 0.34));
+  box-shadow:
+    inset -5px -10px 26px rgba(255, 255, 255, 0.6),
+    inset 7px 13px 30px rgba(58, 88, 148, 0.3),
+    0 26px 54px rgba(42, 62, 102, 0.24);
+  backdrop-filter: blur(3px);
+}
+
+/* The one that carries the eye: deeper, with an iridescent band at the edge. */
+.body--core {
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.32) 9%, rgba(255, 255, 255, 0) 30%),
+    radial-gradient(circle at 68% 74%, rgba(36, 104, 224, 0.92) 0%, rgba(30, 72, 160, 0.55) 44%, rgba(30, 72, 160, 0) 70%),
+    radial-gradient(circle at 86% 30%, rgba(255, 158, 108, 0.5) 0%, rgba(255, 158, 108, 0) 40%),
+    conic-gradient(
+      from 210deg at 50% 50%,
+      rgba(120, 220, 255, 0.34),
+      rgba(160, 140, 255, 0.28),
+      rgba(255, 170, 140, 0.3),
+      rgba(120, 220, 255, 0.34)
+    ),
+    linear-gradient(150deg, rgba(210, 228, 255, 0.7), rgba(62, 96, 166, 0.55));
+  box-shadow:
+    inset -8px -16px 40px rgba(255, 255, 255, 0.45),
+    inset 12px 22px 52px rgba(14, 38, 92, 0.5),
+    0 46px 90px rgba(24, 44, 88, 0.34);
+}
+
+/* A breaker, tilted into the scene. Open: cool and clear. */
+.body--ring,
+.body--held {
+  border-radius: 50%;
+  background: transparent;
   transform-style: preserve-3d;
-  transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: transform;
 }
 
-.hero-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
+.body--ring::after,
+.body--held::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.9vmax solid transparent;
+  background: conic-gradient(
+      from 140deg,
+      rgba(255, 255, 255, 1),
+      rgba(150, 188, 248, 0.72),
+      rgba(255, 255, 255, 1),
+      rgba(120, 156, 214, 0.62),
+      rgba(255, 255, 255, 1)
+    )
+    border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  transform: rotateX(72deg) rotateZ(-16deg);
+  box-shadow: 0 18px 40px rgba(40, 60, 100, 0.22);
 }
 
-.hero-guides {
-  stroke: var(--grid);
+/* Closed: the only warm ring in the scene, and the fill stops at it. */
+.body--held::after {
+  background: conic-gradient(
+      from 140deg,
+      rgba(255, 236, 232, 0.95),
+      rgba(224, 128, 118, 0.75),
+      rgba(255, 240, 236, 0.9),
+      rgba(208, 92, 82, 0.6),
+      rgba(255, 236, 232, 0.95)
+    )
+    border-box;
+  transform: rotateX(66deg) rotateZ(14deg);
 }
 
-.hero-live {
-  stroke: var(--accent);
+.body-caught {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42%;
+  height: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 32%),
+    radial-gradient(circle at 70% 76%, rgba(214, 82, 72, 0.85) 0%, rgba(190, 60, 52, 0.4) 55%, rgba(190, 60, 52, 0) 74%),
+    linear-gradient(150deg, rgba(255, 228, 222, 0.75), rgba(176, 72, 64, 0.45));
+  box-shadow:
+    inset -4px -8px 20px rgba(255, 255, 255, 0.5),
+    inset 6px 11px 24px rgba(120, 30, 26, 0.4),
+    0 18px 38px rgba(110, 40, 36, 0.3);
 }
 
-/* The branch about to be refused is fully live up to the gate. Tinting it
-   early would give away the outcome the gate is there to decide. */
-.hero-live--doomed {
-  stroke: var(--accent);
-}
-
-/* Past a tripped breaker nothing moved, so the conduit is drawn dead. */
-.hero-dead {
-  stroke: var(--rule);
-  stroke-dasharray: 2 18;
-  opacity: 0.8;
-}
-
-.hero-pulse {
-  fill: var(--accent);
-}
-
-.hero-pulse--stopped {
-  fill: var(--critical);
-}
-
-.gate-housing {
-  fill: var(--surface);
-  stroke: var(--grid);
-  stroke-width: 2;
-}
-
-.gate-node {
-  fill: var(--rule);
-}
-
-.gate-arm {
-  stroke: var(--accent);
-}
-
-.gate--tripped .gate-arm {
-  stroke: var(--critical);
-}
-
-.gate--tripped .gate-housing {
-  stroke: color-mix(in srgb, var(--critical) 38%, var(--grid));
-}
-
-.hero-label {
-  font-family: var(--mono);
-  font-size: 15px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  fill: var(--muted);
-}
-
-.hero-label--ok {
-  fill: var(--good);
-}
-
-.hero-label--stop {
-  fill: var(--critical);
-}
-
-/* The copy sits over the art, with a wash so it stays readable across it. */
+/* The copy sits over the scene with a wash that keeps it readable. */
 .hero-body {
   position: relative;
   z-index: 2;
   width: 100%;
-  padding: 40px 0;
+  padding: calc(var(--bar) + 40px) 0 40px;
 }
 
-.hero-body::before {
+/* The wash spans the whole hero, not the text block. Sizing it to the copy
+   left visible horizontal seams across the scene. */
+.hero::before {
   content: "";
   position: absolute;
-  inset: -40px 0;
-  background: linear-gradient(
-    to right,
-    var(--surface) 0%,
-    var(--surface) 30%,
-    color-mix(in srgb, var(--surface) 70%, transparent) 43%,
-    transparent 56%
-  );
+  inset: 0;
+  z-index: 1;
   pointer-events: none;
+  background: radial-gradient(
+    120% 90% at -10% 50%,
+    rgba(236, 239, 245, 0.94) 0%,
+    rgba(236, 239, 245, 0.78) 28%,
+    rgba(236, 239, 245, 0.42) 46%,
+    rgba(236, 239, 245, 0) 66%
+  );
+}
+
+:root[data-theme="dark"] .hero::before {
+  background: radial-gradient(
+    120% 90% at -10% 50%,
+    rgba(12, 14, 18, 0.94) 0%,
+    rgba(12, 14, 18, 0.78) 28%,
+    rgba(12, 14, 18, 0.42) 46%,
+    rgba(12, 14, 18, 0) 66%
+  );
 }
 
 .hero-body > * {
@@ -316,61 +403,135 @@ a {
 
 .eyebrow {
   font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: 0.09em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: rgba(28, 38, 58, 0.62);
   display: block;
-  margin-bottom: 20px;
+  margin-bottom: 26px;
+}
+
+:root[data-theme="dark"] .eyebrow {
+  color: rgba(226, 232, 244, 0.6);
 }
 
 .hero h1 {
-  font-size: clamp(38px, 5.6vw, 78px);
-  line-height: 1.04;
-  letter-spacing: -0.035em;
-  font-weight: 660;
-  margin: 0 0 24px;
+  font-size: clamp(40px, 6.4vw, 92px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 680;
+  margin: 0 0 30px;
+  color: #10141c;
 }
 
-.hero-body p {
+/* The first line is set light so the second lands. */
+.hero h1 .thin {
+  font-weight: 330;
+  letter-spacing: -0.03em;
+}
+
+:root[data-theme="dark"] .hero h1 {
+  color: #f7f9fd;
+}
+
+.hero-lede {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  max-width: 620px;
+}
+
+.hero-rule {
+  height: 1px;
+  background: rgba(28, 38, 58, 0.34);
+  margin-top: 13px;
+}
+
+:root[data-theme="dark"] .hero-rule {
+  background: rgba(226, 232, 244, 0.34);
+}
+
+.hero-lede p {
   margin: 0;
-  max-width: 50ch;
-  color: var(--ink-2);
-  font-size: clamp(16px, 1.3vw, 19px);
+  color: rgba(22, 30, 46, 0.78);
+  font-size: clamp(15px, 1.15vw, 17px);
+  line-height: 1.65;
+}
+
+.hero-lede p b {
+  color: #10141c;
+  font-weight: 640;
+}
+
+:root[data-theme="dark"] .hero-lede p {
+  color: rgba(226, 232, 244, 0.76);
+}
+
+:root[data-theme="dark"] .hero-lede p b {
+  color: #ffffff;
 }
 
 .hero-actions {
   display: flex;
   gap: 12px;
-  margin-top: 34px;
+  margin-top: 38px;
   flex-wrap: wrap;
 }
 
-.hero-scroll {
-  position: absolute;
-  left: 50%;
-  bottom: 26px;
-  transform: translateX(-50%);
-  width: 38px;
-  height: 38px;
+/* Pill buttons, as in the reference: quiet, generous, no hard edges. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border-radius: 999px;
-  border: 1px solid var(--grid);
-  background: var(--surface);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
+  padding: 13px 26px;
+  font-size: 14.5px;
+  font-weight: 560;
+  font-family: var(--sans);
   cursor: pointer;
-  z-index: 3;
-  animation: nudge 2.6s ease-in-out infinite;
+  text-decoration: none;
+  border: 1px solid rgba(28, 38, 58, 0.22);
+  background: rgba(255, 255, 255, 0.42);
+  color: #10141c;
+  backdrop-filter: blur(10px);
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
 }
 
-@keyframes nudge {
-  0%,
-  100% {
-    transform: translate(-50%, 0);
-  }
-  50% {
-    transform: translate(-50%, 5px);
+.pill:hover {
+  background: rgba(255, 255, 255, 0.72);
+  transform: translateY(-1px);
+}
+
+.pill--solid {
+  background: #10141c;
+  border-color: #10141c;
+  color: #ffffff;
+}
+
+.pill--solid:hover {
+  background: #1d2634;
+}
+
+:root[data-theme="dark"] .pill {
+  border-color: rgba(226, 232, 244, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f9fd;
+}
+
+:root[data-theme="dark"] .pill--solid {
+  background: #f7f9fd;
+  border-color: #f7f9fd;
+  color: #10141c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    animation: none;
   }
 }
 
@@ -1171,4 +1332,58 @@ tbody tr {
   border-top: 1px solid var(--grid);
   color: var(--ink) !important;
   font-size: 13px !important;
+}
+
+/* The bar floats clear over the hero scene, then takes a surface. */
+.masthead {
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  transition:
+    background 260ms ease,
+    border-color 260ms ease,
+    backdrop-filter 260ms ease;
+}
+
+.masthead--solid {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom-color: var(--grid);
+}
+
+/* Over the scene the bar wears the hero's ink, not the page's. */
+.masthead:not(.masthead--solid) .wordmark,
+.masthead:not(.masthead--solid) .masthead-nav a {
+  color: #10141c;
+}
+
+.masthead:not(.masthead--solid) .wordmark svg {
+  color: #10141c;
+}
+
+.masthead:not(.masthead--solid) .chip {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(28, 38, 58, 0.18);
+  color: rgba(28, 38, 58, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.masthead:not(.masthead--solid) .theme-toggle {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(28, 38, 58, 0.18);
+  color: rgba(28, 38, 58, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+:root[data-theme="dark"] .masthead:not(.masthead--solid) .wordmark,
+:root[data-theme="dark"] .masthead:not(.masthead--solid) .wordmark svg,
+:root[data-theme="dark"] .masthead:not(.masthead--solid) .masthead-nav a {
+  color: #f7f9fd;
+}
+
+:root[data-theme="dark"] .masthead:not(.masthead--solid) .chip,
+:root[data-theme="dark"] .masthead:not(.masthead--solid) .theme-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(226, 232, 244, 0.22);
+  color: rgba(226, 232, 244, 0.8);
 }

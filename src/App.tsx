@@ -61,6 +61,16 @@ function useTheme() {
 export default function App() {
   const { theme, toggle } = useTheme();
   const [tape, setTape] = useState<TapeEntry[] | null>(null);
+  // The bar floats clear over the hero and only takes a surface once the
+  // scene is behind it.
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.72);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +92,7 @@ export default function App() {
 
   return (
     <>
-      <header className="masthead">
+      <header className={`masthead ${scrolled ? "masthead--solid" : ""}`}>
         <div className="masthead-inner">
           <span className="wordmark">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
