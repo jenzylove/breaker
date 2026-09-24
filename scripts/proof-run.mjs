@@ -311,9 +311,25 @@ async function main() {
   ]);
   step("list TSLAx as Tier 1 and register the dollar quote asset", {
     symbol: symbol.toBase58(),
+    halt_state: haltState.toBase58(),
+    quote_asset: quoteAsset.toBase58(),
+    ticker: "TSLAx",
+    tier: 1,
     note: "a newly listed symbol starts halted until the publisher opens it",
     tx: explorer(sig),
   });
+  // Recorded at the top level so the dashboard can read live venue state
+  // without deriving PDAs in the browser.
+  log.listings = [
+    {
+      ticker: "TSLAx",
+      symbol: symbol.toBase58(),
+      halt_state: haltState.toBase58(),
+      mint: baseMint.publicKey.toBase58(),
+      pool: null,
+    },
+  ];
+  log.venue = venue.toBase58();
 
   const capShares = (ADV_SHARES * 25n) / 10_000n;
   sig = await send([

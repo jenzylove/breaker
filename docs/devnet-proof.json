@@ -27,7 +27,10 @@
       "name": "list TSLAx as Tier 1 and register the dollar quote asset",
       "symbol": "55MAGtMBX7eHRuZ9wZDXugUEVaJ3QdbmqfKrQ3rrjY4h",
       "note": "a newly listed symbol starts halted until the publisher opens it",
-      "tx": "https://explorer.solana.com/tx/4KgeMqu2Fj3tm5XZ6YPgVMfzdx2vEmULNDWiU47EQzxLMPHQqpW9eKcZdjcniQCJmsisFtpG9MoSCdKpa8PJizaE?cluster=devnet"
+      "tx": "https://explorer.solana.com/tx/4KgeMqu2Fj3tm5XZ6YPgVMfzdx2vEmULNDWiU47EQzxLMPHQqpW9eKcZdjcniQCJmsisFtpG9MoSCdKpa8PJizaE?cluster=devnet",
+      "halt_state": "8Vm7X6AwL71EGWQzUjBAQmR5XsecAWeUX1Lc6vpbCDt7",
+      "ticker": "TSLAx",
+      "tier": 1
     },
     {
       "name": "publish prior month average daily volume",
@@ -92,6 +95,16 @@
       "shares_per_trade": "148.61347",
       "sequence": "[{\"trade\":1,\"result\":\"settled\",\"tx\":\"https://explorer.solana.com/tx/4M8yUTxUSkBBrdxB4eQUBTF7LtDnivCi6Nv1vaFVHy5xPwZAt46B8UgpDpMb9ZppbtwHBBhndvb76siXEw7t1DVB?cluster=devnet\"},{\"trade\":2,\"result\":\"REVERTED\",\"error\":\"VolumeCapExceeded\",\"error_number\":6003,\"tx\":\"https://explorer.solana.com/tx/2Z2BhF97pU4gBG4G9mEe8ajUy8XKtr5kenjPFMeqGPva1HTrBJ8i2xRtTX1qDSVXzY1kaVNQoWNTBv3529X6948o?cluster=devnet\"}]",
       "note": "the order allows the first exceedance; the next crossing is refused"
+    }
+  ],
+  "venue": "HbAjsRcNtzgGSVCAdCyyeB5Mn5yCDVU4WdZvpZaixKiS",
+  "listings": [
+    {
+      "ticker": "TSLAx",
+      "symbol": "55MAGtMBX7eHRuZ9wZDXugUEVaJ3QdbmqfKrQ3rrjY4h",
+      "halt_state": "8Vm7X6AwL71EGWQzUjBAQmR5XsecAWeUX1Lc6vpbCDt7",
+      "mint": "474a3yS1A4NZSjQSumYwzn7a1uL4vbjrxU5G915nrUfe",
+      "pool": "AnawXHyoFrJu8LaVYbz46eoDRHtNK8Ym7yv6CkN8uj8Z"
     }
   ]
 }

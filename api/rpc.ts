@@ -1,6 +1,7 @@
 export const config = { runtime: "edge" };
 
-const upstream = process.env.SOLANA_RPC_URL ?? "https://solana-rpc.publicnode.com";
+// Devnet by default, since that is where the venue in the proof run lives.
+const upstream = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 const ALLOWED_METHODS = new Set(["getAccountInfo", "getMultipleAccounts", "getSlot"]);
 const MAX_BODY_BYTES = 64 * 1024;
 
