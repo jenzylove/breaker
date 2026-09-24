@@ -1,0 +1,24 @@
+[package]
+name = "reference-pool"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Reference tokenized-equity pool showing an unguarded swap and the Breaker CPI fix"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "reference_pool"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "1.2.0", features = ["init-if-needed"] }
+anchor-spl = { version = "1.2.0", default-features = false, features = ["token", "token_2022", "associated_token"] }
+breaker = { path = "../breaker", features = ["cpi"] }
+breaker-core = { path = "../../crates/breaker-core" }

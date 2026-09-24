@@ -1,0 +1,23 @@
+[package]
+name = "breaker"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Trade-time compliance guard for tokenized equity venues"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "breaker"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "1.2.0"
+breaker-core = { path = "../../crates/breaker-core" }
+spl-token-2022-interface = "3.1.1"

@@ -1,0 +1,12 @@
+[package]
+name = "breaker-core"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Deterministic compliance engine for the SEC Innovation Exemption"
+
+[lib]
+crate-type = ["lib"]
+
+[features]
+default = []

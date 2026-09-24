@@ -1,0 +1,16 @@
+*.tsbuildinfo
+.anchor/
+.demo*
+.demo/
+.env
+.env
+.env.local
+.vercel
+dist/
+node_modules/
+playwright-report/
+target/
+test-ledger/
+test-results/
+vite.config.d.ts
+vite.config.js
