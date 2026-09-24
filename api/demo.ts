@@ -6,6 +6,12 @@
 // the demo exchange's own devnet key. Nothing of value is at stake: devnet
 // SOL, devnet mints, a fixed trade size, and the key never leaves the server.
 //
+// Each order is one atomic transaction: raise a halt on the stock, attempt the
+// trade, lower the halt. On the ordinary pool the trade settles with the halt
+// raised, which is a pool trading straight through a halt. On Breaker the
+// guarded trade reverts, and that reverts the whole transaction, halt and all.
+// Either way nothing is left in a fake state and no two visitors can collide.
+//
 // A refused trade is sent with preflight skipped so the failure actually lands
 // on chain. A revert that only ever existed in a simulation is not evidence.
 //
@@ -108,6 +114,9 @@ function callerOf(request: VercelRequest): string {
 // test that re-derives the same table.
 const SWAP_GUARDED = Buffer.from([238, 241, 44, 95, 219, 31, 2, 212]);
 const SWAP_UNGUARDED = Buffer.from([92, 5, 207, 14, 181, 254, 13, 59]);
+const SET_HALT = Buffer.from([212, 192, 179, 66, 23, 73, 197, 15]);
+
+export const config = { maxDuration: 60 };
 
 const meta = (pubkey: PublicKey, isWritable = false, isSigner = false) => ({
   pubkey,
@@ -214,6 +223,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
     data: Buffer.concat([guarded ? SWAP_GUARDED : SWAP_UNGUARDED, u64(TRADE_AMOUNT)]),
   });
 
+  const haltIx = (halted: boolean) =>
+    new TransactionInstruction({
+      programId: new PublicKey(venueConfig.breaker),
+      keys: [
+        meta(new PublicKey(venueConfig.venue)),
+        meta(new PublicKey(listing.halt_state), true),
+        meta(authority.publicKey, false, true),
+      ],
+      data: Buffer.concat([SET_HALT, Buffer.from([halted ? 1 : 0])]),
+    });
+
   try {
     const balance = await connection.getBalance(authority.publicKey, "confirmed");
     if (balance < BALANCE_FLOOR_LAMPORTS) {
@@ -223,11 +243,12 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+    // Raise the halt, trade, lower it. Atomic, so it cannot leak.
     const tx = new Transaction({
       feePayer: authority.publicKey,
       blockhash,
       lastValidBlockHeight,
-    }).add(instruction);
+    }).add(haltIx(true), instruction, haltIx(false));
     tx.sign(authority);
 
     // Preflight would reject a refused trade off chain and leave nothing to

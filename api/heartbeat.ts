@@ -1,12 +1,11 @@
-// The demo exchange's halt publisher.
+// The reference venue's halt publisher.
 //
-// A real venue mirrors its listing exchanges continuously; the program treats a
-// feed that has gone quiet as untrustworthy and stops trading rather than guess.
-// That is correct, and it means this demo needs a heartbeat or the board reads
-// as broken an hour after seeding.
+// It mirrors the issuer's own published halt flag for each listed stock, read
+// from the xStocks registry, and writes it on chain. That is the real source a
+// production venue would use; until now this demo invented its halt states.
 //
-// The page calls this on load, so the feed is fresh whenever anyone is looking.
-// Each call is four devnet transactions costing a few thousand lamports.
+// The program treats a feed that has gone quiet as untrustworthy and stops
+// trading rather than guess, so the page calls this on load to keep it fresh.
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
@@ -73,6 +72,24 @@ const venueConfig = {
 // VENUE-CONFIG-END
 
 const RPC = process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+const REGISTRY = "https://api.xstocks.fi/api/v2/public/assets";
+
+/** The issuer's halt flag for one stock, or null if the registry is down. */
+async function issuerHalted(symbol: string): Promise<boolean | null> {
+  try {
+    const response = await fetch(`${REGISTRY}/${encodeURIComponent(symbol)}`, {
+      headers: { "user-agent": "Mozilla/5.0 (compatible; Breaker/1.0)" },
+    });
+    if (!response.ok) return null;
+    const node = (await response.json()) as {
+      isTradingHalted?: boolean;
+      trading?: { isTradingHalted?: boolean };
+    };
+    return Boolean(node.isTradingHalted || node.trading?.isTradingHalted);
+  } catch {
+    return null;
+  }
+}
 
 // sha256("global:set_halt")[..8]
 const SET_HALT = Buffer.from([212, 192, 179, 66, 23, 73, 197, 15]);
@@ -107,12 +124,21 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const connection = new Connection(RPC, "confirmed");
   const venue = new PublicKey(venueConfig.venue);
 
+  // Read the issuer's flag for every listed stock. If the registry cannot be
+  // reached, publish nothing: republishing a guess would be worse than letting
+  // the feed age out and fail closed, which is exactly what the program does.
+  const flags = await Promise.all(venueConfig.listings.map((l) => issuerHalted(l.ticker)));
+  if (flags.some((f) => f === null)) {
+    lastRun = 0;
+    return response
+      .status(503)
+      .json({ error: "The issuer registry could not be read, so nothing was published." });
+  }
+
   try {
     const tx = new Transaction();
-    for (const listing of venueConfig.listings) {
-      // Republishes the state the exchange is actually in, which keeps NVIDIA
-      // halted rather than quietly reopening it.
-      const halted = listing.state === "halted";
+    for (const [i, listing] of venueConfig.listings.entries()) {
+      const halted = flags[i] === true;
       tx.add(
         new TransactionInstruction({
           programId: new PublicKey(venueConfig.breaker),
@@ -140,6 +166,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     return response.status(200).json({
       published: venueConfig.listings.length,
+      source: "xStocks issuer registry",
+      halted: venueConfig.listings.filter((_, i) => flags[i]).map((l) => l.ticker),
       signature,
     });
   } catch (error) {

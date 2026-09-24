@@ -12,9 +12,12 @@ function apiRoutes(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url ?? "";
-        if (!url.startsWith("/api/tape")) return next();
+        // The edge functions share one signature, so any of them can be served
+        // locally by name. Node ones (demo, heartbeat) are exercised on deploy.
+        const match = /^\/api\/(tape|stocks)(?:\?|$)/.exec(url);
+        if (!match) return next();
         try {
-          const mod = await server.ssrLoadModule("/api/tape.ts");
+          const mod = await server.ssrLoadModule(`/api/${match[1]}.ts`);
           const handler = mod.default as (request: Request) => Promise<Response>;
           const response = await handler(new Request(`http://localhost${url}`));
           res.statusCode = response.status;
