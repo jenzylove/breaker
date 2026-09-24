@@ -1,0 +1,22 @@
+name: halt publisher
+
+# Mirrors the issuer's halt flags onto the demo venue every five minutes, so
+# the feed stays fresh whether or not anyone has the site open. The venue's
+# tolerance is fifteen minutes; if runs stop, Breaker starts refusing trades
+# in those stocks instead of trusting an old flag.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Publish the issuer's halt flags
+        run: |
+          status=$(curl -s -o reply.json -w "%{http_code}" -X POST https://breaker-one.vercel.app/api/heartbeat)
+          cat reply.json
+          echo
+          test "$status" -lt 500
