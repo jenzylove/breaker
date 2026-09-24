@@ -1,5 +1,5 @@
 {
-  "name": "navguard",
+  "name": "breaker",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -8,8 +8,8 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
-    "demo:live": "node scripts/live-proof.mjs",
-    "check:program": "cargo check -p navguard"
+    "proof": "node scripts/proof-run.mjs",
+    "check:program": "cargo check --workspace"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.14",
