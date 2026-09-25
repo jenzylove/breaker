@@ -1,0 +1,37 @@
+name: halt keepalive
+
+# GitHub's five minute schedule never fired for this repo, so this job keeps
+# the halt publisher running on its own: it publishes every five minutes for
+# just under six hours (the runner limit), then starts its own next run. The
+# six hourly schedule restarts the chain if it is ever broken.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: halt-keepalive
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - name: Publish the issuer's halt flags every five minutes
+        run: |
+          end=$(( $(date +%s) + 345 * 60 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            code=$(curl -s -o reply.json -w "%{http_code}" -X POST https://breaker-one.vercel.app/api/heartbeat || echo 000)
+            echo "$(date -u +%H:%M:%S) $code $(head -c 160 reply.json 2>/dev/null)"
+            sleep 300
+          done
+      - name: Start the next run
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run halt-keepalive.yml --repo "${{ github.repository }}"
