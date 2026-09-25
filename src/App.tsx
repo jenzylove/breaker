@@ -63,7 +63,7 @@ const RULES = [
   {
     title: "Stop when the exchange stops",
     plain:
-      "When Nasdaq halts a stock, every venue must halt its token too. The issuer's halt never reaches the chain: none of the seven stocks xStocks had halted on 24 September was paused on Solana.",
+      "When Nasdaq halts a stock, every venue must halt its token too. The gap is already live on Solana: xStocks trade there around the clock, yet on 24 September none of the seven their issuer had halted was paused on chain.",
     breaker: "Breaker refuses the trade while the stock is halted, or if the halt feed goes quiet.",
   },
   {
@@ -194,8 +194,10 @@ export default function App() {
           </ol>
 
           <p className="scope-note" data-reveal>
-            Breaker covers these three conditions, not the rest of the order: access controls,
-            issuer objections, OFAC and recordkeeping stay with the venue. Testnet, not audited.{" "}
+            Breaker is built to these three conditions, not the rest of the order: access controls,
+            issuer objections, OFAC and recordkeeping stay with the venue. xStocks are the live data
+            here, not a claim: they are tracker certificates sold outside the US, which this order
+            does not cover. Testnet, not audited.{" "}
             <a href={ORDER_URL} target="_blank" rel="noreferrer">
               Read the order
             </a>

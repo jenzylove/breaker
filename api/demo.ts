@@ -167,6 +167,8 @@ const REFUSAL: Record<string, string> = {
   VolumeCapExceeded: "This trade would push the venue past its daily limit for this stock.",
   AdvUnset: "No trading volume figure has been published for this stock yet.",
   IssuerPaused: "The company that issues this token has frozen it.",
+  PoolNotApproved: "This pool is not approved by the venue, so Breaker will not record its trades.",
+  AccountNotInitialized: "This pool is not approved by the venue, so Breaker will not record its trades.",
 };
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -233,11 +235,18 @@ export default async function handler(request: VercelRequest, response: VercelRe
     meta(authority.publicKey, false, true),
   ];
   if (guarded) {
+    const venue = new PublicKey(venueConfig.venue);
+    // The venue's approval for this pool; Breaker refuses pools without one.
+    const [approvedPool] = PublicKey.findProgramAddressSync(
+      [Buffer.from("approved"), venue.toBuffer(), pool.toBuffer()],
+      new PublicKey(venueConfig.breaker),
+    );
     keys.push(
-      meta(new PublicKey(venueConfig.venue)),
+      meta(venue),
       meta(new PublicKey(listing.symbol), true),
       meta(new PublicKey(listing.halt_state)),
       meta(new PublicKey(venueConfig.quote_asset)),
+      meta(approvedPool),
       meta(new PublicKey(venueConfig.breaker)),
     );
   }

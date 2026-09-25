@@ -85,7 +85,11 @@ async function issuerHalted(symbol: string): Promise<boolean | null> {
       isTradingHalted?: boolean;
       trading?: { isTradingHalted?: boolean };
     };
-    return Boolean(node.isTradingHalted || node.trading?.isTradingHalted);
+    // Only an explicit true or false counts. A missing or malformed flag is a
+    // failed read, so nothing is published and the feed fails closed rather
+    // than reporting a stock as open on a guess.
+    const flag = node.isTradingHalted ?? node.trading?.isTradingHalted;
+    return typeof flag === "boolean" ? flag : null;
   } catch {
     return null;
   }

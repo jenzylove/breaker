@@ -181,8 +181,8 @@ export default function Adopt({ onRecorded }: { onRecorded: (signature: string) 
           <span className="beat">For venues</span>
           <h2>How an exchange plugs it in</h2>
           <p>
-            One call in the pool's swap. Flip it on or off, halt the stock, and run a real swap on
-            Solana's test network.
+            The venue approves its pool once, then adds one call to the pool's swap. Flip it on or
+            off, halt the stock, and run a real swap on Solana's test network.
           </p>
         </div>
 
@@ -231,8 +231,8 @@ export default function Adopt({ onRecorded }: { onRecorded: (signature: string) 
                 <span className={`ide-added ${withBreaker ? "is-on" : ""}`}>
                   <span className="ln ln--add">{"+   breaker::cpi::check_and_record(\n"}</span>
                   <span className="ln ln--add">{"+       CpiContext::new_with_signer(breaker_program,\n"}</span>
-                  <span className="ln ln--add">{"+           CheckAndRecord { venue, symbol, halt_state,\n"}</span>
-                  <span className="ln ln--add">{"+                            quote_asset, mint, pool },\n"}</span>
+                  <span className="ln ln--add">{"+           CheckAndRecord { venue, symbol, halt_state, quote_asset,\n"}</span>
+                  <span className="ln ln--add">{"+                            mint, pool, approved_pool },\n"}</span>
                   <span className="ln ln--add">{"+           &[pool_seeds]),\n"}</span>
                   <span className="ln ln--add">{"+       base_amount, quote_out, side,\n"}</span>
                   <span className="ln ln--add">{"+   )?;\n"}</span>

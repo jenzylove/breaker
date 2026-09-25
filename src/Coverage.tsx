@@ -118,7 +118,7 @@ export default function Coverage() {
           <h2>Every xStocks token, live</h2>
           <p>
             The issuer's own status for all of them. When one is halted or closed, the issuer stops
-            trading it. Pools do not.
+            trading it. Pools do not. Breaker can list any of them; the test venue lists four.
           </p>
         </div>
 

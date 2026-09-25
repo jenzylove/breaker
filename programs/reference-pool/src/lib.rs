@@ -125,6 +125,7 @@ pub mod reference_pool {
                     quote_asset: ctx.accounts.quote_asset.to_account_info(),
                     mint: ctx.accounts.base_mint.to_account_info(),
                     pool: ctx.accounts.pool.to_account_info(),
+                    approved_pool: ctx.accounts.approved_pool.to_account_info(),
                 },
                 &[seeds],
             ),
@@ -352,6 +353,8 @@ pub struct SwapGuarded<'info> {
     pub halt_state: UncheckedAccount<'info>,
     /// CHECK: validated by the Breaker program it is passed to.
     pub quote_asset: UncheckedAccount<'info>,
+    /// CHECK: the venue's approval for this pool, validated by Breaker.
+    pub approved_pool: UncheckedAccount<'info>,
     pub breaker_program: Program<'info, breaker::program::Breaker>,
 
     pub token_program: Interface<'info, TokenInterface>,

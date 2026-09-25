@@ -26,7 +26,14 @@ const BREAKER_PROGRAM =
  *  only ever go through the pool. */
 const POOL_PROGRAM = process.env.POOL_PROGRAM_ID ?? "4EWRfxyMmze3F3e9Lff84PK1W9L7EFGdKa147icdJLxU";
 
-const MAX_SIGNATURES = 60;
+/** The order asks for every transaction of the past 30 days to be available. */
+const WINDOW_DAYS = 30;
+/** getSignaturesForAddress returns at most 1,000 per page. */
+const PAGE = 1000;
+const MAX_PAGES = 20;
+/** Uncached transactions decoded per request; the rest are reported unread
+ *  and picked up by the next request. */
+const MAX_DECODE = 160;
 const RPC_TIMEOUT_MS = 9_000;
 const BATCH_SIZE = 8;
 /** Signatures we have already resolved, so a reload costs nothing. Empty array
@@ -112,21 +119,39 @@ interface SignatureInfo {
   signature: string;
   slot: number;
   err: unknown;
+  blockTime?: number | null;
 }
 
 export default async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50) || 50, MAX_SIGNATURES);
+  const limitParam = Number(url.searchParams.get("limit") ?? 0);
+  const limit = limitParam > 0 ? Math.floor(limitParam) : null;
+  const cutoff = Math.floor(Date.now() / 1000) - WINDOW_DAYS * 86_400;
 
   let scanned = 0;
+  let reachedWindowStart = false;
   let error: string | null = null;
   let landedSignatures: string[] = [];
 
   try {
-    const [signatures] = await rpcBatch<SignatureInfo[]>([
-      { method: "getSignaturesForAddress", params: [POOL_PROGRAM, { limit }] },
-    ]);
-    if (!signatures) throw new Error("Could not list the program's transactions");
+    // Page back through the pool program's history until the window starts.
+    const signatures: SignatureInfo[] = [];
+    let before: string | undefined;
+    for (let page = 0; page < MAX_PAGES && !reachedWindowStart; page += 1) {
+      const [batch] = await rpcBatch<SignatureInfo[]>([
+        { method: "getSignaturesForAddress", params: [POOL_PROGRAM, { limit: PAGE, ...(before ? { before } : {}) }] },
+      ]);
+      if (!batch) throw new Error("Could not list the program's transactions");
+      for (const info of batch) {
+        if (info.blockTime && info.blockTime < cutoff) {
+          reachedWindowStart = true;
+          break;
+        }
+        signatures.push(info);
+      }
+      if (batch.length < PAGE) reachedWindowStart = true;
+      before = batch[batch.length - 1]?.signature;
+    }
 
     // A reverted transaction produced no fill, so it has no place here.
     const landed = signatures.filter((s) => !s.err);
@@ -134,7 +159,7 @@ export default async function handler(request: Request): Promise<Response> {
     landedSignatures = landed.map((s) => s.signature);
 
     // Only signatures we have never resolved cost an RPC call.
-    const pending = landed.filter((s) => !decoded.has(s.signature));
+    const pending = landed.filter((s) => !decoded.has(s.signature)).slice(0, MAX_DECODE);
 
     for (let i = 0; i < pending.length; i += BATCH_SIZE) {
       if (i > 0) await new Promise((r) => setTimeout(r, 250));
@@ -196,11 +221,16 @@ export default async function handler(request: Request): Promise<Response> {
   const unread = landedSignatures.length - resolved.length;
 
   // Everything resolved so far, newest first. Survives a failed refresh.
-  const entries = [...decoded.values()].flat().sort((a, b) => b.slot - a.slot);
+  const inWindow = new Set(landedSignatures);
+  const entries = [...decoded.entries()]
+    .filter(([signature]) => inWindow.has(signature))
+    .flatMap(([, rows]) => rows)
+    .sort((a, b) => b.slot - a.slot);
   const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
-  const rows = symbolFilter
+  const matched = symbolFilter
     ? entries.filter((e) => e.symbol.toUpperCase() === symbolFilter)
     : entries;
+  const rows = limit ? matched.slice(0, limit) : matched;
 
   const body = {
     venue_program: BREAKER_PROGRAM,
@@ -212,10 +242,19 @@ export default async function handler(request: Request): Promise<Response> {
       "pool", "venue", "mint", "quote_mint", "base_raw_amount", "quote_raw_amount",
       "multiplier", "cap_breach", "signature", "slot",
     ],
+    // The window this record covers. It is complete only when paging reached
+    // the start of the window and every transaction in it was read.
+    window: {
+      days: WINDOW_DAYS,
+      from: new Date(cutoff * 1000).toISOString(),
+      to: new Date().toISOString(),
+      reached_start: reachedWindowStart,
+    },
     scanned,
     // Transactions this request could not read. Zero once the cache warms.
     unread,
-    complete: error === null && unread === 0 && scanned > 0,
+    complete: error === null && unread === 0 && reachedWindowStart,
+    total_in_window: matched.length,
     count: rows.length,
     transactions: rows,
     ...(error ? { error } : {}),
@@ -225,7 +264,7 @@ export default async function handler(request: Request): Promise<Response> {
     status: rows.length === 0 && error ? 502 : 200,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "public, max-age=20, stale-while-revalidate=120",
+      "cache-control": "public, max-age=20, s-maxage=30, stale-while-revalidate=120",
       "access-control-allow-origin": "*",
     },
   });

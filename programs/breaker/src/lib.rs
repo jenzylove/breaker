@@ -330,6 +330,36 @@ pub mod breaker {
         ctx.accounts.venue.paused = paused;
         Ok(())
     }
+
+    /// Names a pool that may call `check_and_record` for this venue.
+    ///
+    /// Signing alone is not enough: without an approval any account could sign
+    /// as a "pool", write trades into the record and use up a stock's daily
+    /// limit so real trades get refused. A venue approves the program derived
+    /// address its pool program signs with, so a record can only come from
+    /// inside that program's swap, in the same transaction that settles it.
+    pub fn approve_pool(ctx: Context<ApprovePool>, pool: Pubkey) -> Result<()> {
+        let approved = &mut ctx.accounts.approved_pool;
+        approved.venue = ctx.accounts.venue.key();
+        approved.pool = pool;
+        approved.bump = ctx.bumps.approved_pool;
+        emit!(PoolApproval {
+            venue: approved.venue,
+            pool,
+            approved: true,
+        });
+        Ok(())
+    }
+
+    /// Withdraws a pool's approval. Its next call to `check_and_record` fails.
+    pub fn revoke_pool(ctx: Context<RevokePool>) -> Result<()> {
+        emit!(PoolApproval {
+            venue: ctx.accounts.venue.key(),
+            pool: ctx.accounts.approved_pool.pool,
+            approved: false,
+        });
+        Ok(())
+    }
 }
 
 fn tier_of(symbol: &Account<Symbol>) -> Result<Tier> {
@@ -356,10 +386,10 @@ fn usd_notional(quote: &Account<QuoteAsset>, quote_raw_amount: u64) -> Result<u6
             };
             u64::try_from(scaled).map_err(|_| error!(BreakerError::ShareConversionOverflow))
         }
-        // Converting a non dollar quote asset needs the Pyth feed named on the
-        // quote asset account. Wired in the pricing phase; until then a venue
-        // must quote in a dollar stablecoin rather than publish a tape it
-        // cannot denominate.
+        // Not implemented. Converting a non dollar quote asset would need the
+        // Pyth feed named on the quote asset account; until that exists a trade
+        // against one is refused rather than recorded at a guessed dollar
+        // value, so a venue must quote in a dollar stablecoin.
         QuoteKind::PythPriced => Err(error!(BreakerError::QuotePricingUnavailable)),
     }
 }
@@ -426,6 +456,15 @@ pub struct QuoteAsset {
     pub decimals: u8,
     pub kind: QuoteKind,
     pub pyth_feed_id: [u8; 32],
+    pub bump: u8,
+}
+
+/// A venue's approval for one pool to call `check_and_record`.
+#[account]
+#[derive(InitSpace)]
+pub struct ApprovedPool {
+    pub venue: Pubkey,
+    pub pool: Pubkey,
     pub bump: u8,
 }
 
@@ -539,6 +578,15 @@ pub struct CheckAndRecord<'info> {
     /// The pool settling the fill. It signs so a tape entry cannot be forged on
     /// another pool's behalf.
     pub pool: Signer<'info>,
+    /// The venue's approval for that pool. An unapproved signer cannot record
+    /// trades or consume the daily limit.
+    #[account(
+        has_one = venue,
+        constraint = approved_pool.pool == pool.key() @ BreakerError::PoolNotApproved,
+        seeds = [b"approved", venue.key().as_ref(), pool.key().as_ref()],
+        bump = approved_pool.bump
+    )]
+    pub approved_pool: Account<'info, ApprovedPool>,
 }
 
 #[derive(Accounts)]
@@ -561,6 +609,41 @@ pub struct SetVenuePaused<'info> {
 
 /// One entry of the dollar denominated tape the order requires to be public
 /// within ten minutes of every fill.
+#[derive(Accounts)]
+#[instruction(pool: Pubkey)]
+pub struct ApprovePool<'info> {
+    #[account(has_one = authority, seeds = [b"venue", authority.key().as_ref()], bump = venue.bump)]
+    pub venue: Account<'info, Venue>,
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + ApprovedPool::INIT_SPACE,
+        seeds = [b"approved", venue.key().as_ref(), pool.as_ref()],
+        bump
+    )]
+    pub approved_pool: Account<'info, ApprovedPool>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RevokePool<'info> {
+    #[account(has_one = authority, seeds = [b"venue", authority.key().as_ref()], bump = venue.bump)]
+    pub venue: Account<'info, Venue>,
+    #[account(mut, close = authority, has_one = venue)]
+    pub approved_pool: Account<'info, ApprovedPool>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+}
+
+#[event]
+pub struct PoolApproval {
+    pub venue: Pubkey,
+    pub pool: Pubkey,
+    pub approved: bool,
+}
+
 #[event]
 pub struct TradeRecorded {
     pub venue: Pubkey,
@@ -669,4 +752,6 @@ pub enum BreakerError {
     PythFeedRequired,
     #[msg("This quote asset cannot be denominated in dollars yet")]
     QuotePricingUnavailable,
+    #[msg("This pool is not approved by the venue")]
+    PoolNotApproved,
 }

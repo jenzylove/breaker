@@ -34,9 +34,15 @@ maker is that it never closes. A pool does not know what 0.25% of last month's a
 is, or how much of it today's trading has already consumed. And a pool emits raw token amounts, not
 the dollar denominated tape the order requires to be public within ten minutes of every fill.
 
-The issuer's halt does not reach the chain on its own either. On 24 September 2026 xStocks had seven
-stocks halted, and none of their Solana mints had the Token-2022 pause set, so every one of them stayed
-freely tradable in any pool.
+The gap is already live on Solana. xStocks trade there around the clock and their issuer halts
+them, but the halt does not reach the chain: on 24 September 2026 xStocks had seven stocks halted,
+and none of their Solana mints had the Token-2022 pause set, so every one stayed freely tradable in
+any pool.
+
+To be precise about scope: xStocks themselves are tracker certificates sold outside the US, without
+shareholder rights, so this order does not cover them. They are the live evidence that the gap
+exists and the data Breaker runs against. The order is the rulebook Breaker is built to, for the
+qualifying tokenized stocks it does cover.
 
 Breaker is the call a venue makes before it settles.
 
@@ -71,6 +77,7 @@ sequenceDiagram
     T->>P: swap(base_amount)
     P->>P: price the fill on its own curve
     P->>B: check_and_record(base, quote, side), signed by the pool PDA
+    B->>B: is this pool approved by the venue?
     B->>H: halted? refreshed within tolerance?
     B->>S: paused? volume window, cap, breach count
     alt halted, stale, paused or over the cap
@@ -127,7 +134,11 @@ the mint and refuses anything that is not a Token-2022 mint with the Scaled UI A
 a venue cannot list a token it mislabels. `register_quote_asset` tells it how to value the quote side
 in dollars.
 
-**3. Add one call before settlement.** This is the complete difference between the two swaps in
+**3. Approve the pool.** `approve_pool(pool)` names the program derived address the pool program
+signs with. Breaker only records trades from approved pools, so no other account can write trades
+into the record or use up a stock's daily limit; `revoke_pool` withdraws it.
+
+**4. Add one call before settlement.** This is the complete difference between the two swaps in
 [`programs/reference-pool/src/lib.rs`](programs/reference-pool/src/lib.rs), and the only change a
 pool needs:
 
@@ -138,7 +149,7 @@ pool needs:
 +    breaker::cpi::check_and_record(
 +        CpiContext::new_with_signer(
 +            breaker_program,
-+            CheckAndRecord { venue, symbol, halt_state, quote_asset, mint, pool },
++            CheckAndRecord { venue, symbol, halt_state, quote_asset, mint, pool, approved_pool },
 +            &[pool_seeds],
 +        ),
 +        base_amount, quote_out, side,
@@ -169,10 +180,13 @@ reverts. Nothing moves.
 | 6004 | `AdvUnset` | No volume figure has been published for the stock |
 | 6009 | `IssuerPaused` | The issuer has paused the mint |
 | 6011 | `VenuePaused` | The venue operator has paused trading |
+| 3012 | `AccountNotInitialized` | The signing pool has no approval from this venue |
+| 2006 | `ConstraintSeeds` | The approval passed in belongs to a different pool |
 
 `side` is from the pool's point of view: `0` when the pool sold the equity token, `1` when it bought
-it. The pool must sign the CPI with its own seeds, so no one can write trades into the record on
-another pool's behalf.
+it. The pool must sign the CPI with its own seeds and hold the venue's approval, so no one can write
+trades into the record on another pool's behalf. Because the check and the settlement run in one
+transaction, a trade is only ever recorded if the swap that settled it succeeded.
 
 ---
 
@@ -182,8 +196,8 @@ The halt flag is only as good as its publisher, so the publisher does not decide
 the issuer. xStocks publishes a registry of every tokenized stock it issues, 1,124 of them with a
 Solana mint, and each entry carries the issuer's own `isTradingHalted` flag and trading period.
 [`api/heartbeat.ts`](api/heartbeat.ts) reads that flag for each listed stock and writes it on chain.
-If the registry cannot be read, it publishes nothing, the feed ages past its tolerance, and Breaker
-refuses trades rather than guessing.
+If the registry cannot be read, or an entry's halt flag is missing or not a plain true or false, it
+publishes nothing, the feed ages past its tolerance, and Breaker refuses trades rather than guessing.
 
 An issuer halt does not reach the chain by itself. On 24 September 2026 xStocks had seven stocks
 halted, and none of their mints had the Token-2022 pause set, so each token stayed freely tradable in
@@ -242,9 +256,11 @@ affiliated venue this program cannot observe.
 readable form within ten minutes of every fill, carrying symbol, price, size, UTC timestamp,
 direction and pool details.
 
-Every settled fill emits a `TradeRecorded` event. `/api/tape` rebuilds those rows from chain logs on
-every request, so the tape is current to the last confirmed slot rather than to whenever an indexer
-last ran. Nothing in it is privileged: the same rows can be reconstructed by anyone reading the
+Every settled fill emits a `TradeRecorded` event. `/api/tape` rebuilds those rows from chain logs,
+paging back through the pool program's history for the full 30 day window the order asks for, so
+the tape is current to the last confirmed slot rather than to whenever an indexer last ran. Its
+`window`, `unread` and `complete` fields say exactly what a response covers: `complete` is true
+only when paging reached the start of the window and every transaction in it was read. Nothing in it is privileged: the same rows can be reconstructed by anyone reading the
 program's logs, which is what makes the tape verifiable rather than merely published.
 
 ---
@@ -298,7 +314,19 @@ Cap 200 shares, 148.61 shares per fill.
 | 1 | Settled: first exceedance, allowed by the order and recorded | [tx](https://explorer.solana.com/tx/4M8yUTxUSkBBrdxB4eQUBTF7LtDnivCi6Nv1vaFVHy5xPwZAt46B8UgpDpMb9ZppbtwHBBhndvb76siXEw7t1DVB?cluster=devnet) |
 | 2 | **Reverted**, `VolumeCapExceeded` (6003) | [tx](https://explorer.solana.com/tx/2Z2BhF97pU4gBG4G9mEe8ajUy8XKtr5kenjPFMeqGPva1HTrBJ8i2xRtTX1qDSVXzY1kaVNQoWNTBv3529X6948o?cluster=devnet) |
 
-Full artifact with all 15 steps: [`docs/devnet-proof.json`](docs/devnet-proof.json).
+Full artifact with all 15 steps: [`docs/devnet-proof.json`](docs/devnet-proof.json). These runs
+predate pool approval; the cap logic they exercise is unchanged.
+
+### Forged trades are refused
+
+An audit found that any account could sign as a pool and write trades into the record. Pools now
+need the venue's approval. [`scripts/forge-attempt.mjs`](scripts/forge-attempt.mjs) tries it from a
+fresh key against the live devnet program:
+
+| Attempt | Result | |
+|---|---|---|
+| Unapproved signer, no approval | **Refused**, `AccountNotInitialized` | [tx](https://explorer.solana.com/tx/ARgMyFhd2zDmpWPBS9pNuY2Xfji9Nd7crGvnogbMPuogo6iNj2c75kVDcvxWHRdNVm3remRAKDhHXQhzrjdDVE7?cluster=devnet) |
+| Unapproved signer, borrowing the NVDAx pool's approval | **Refused**, `ConstraintSeeds` | [tx](https://explorer.solana.com/tx/4wZTGYCijLoDECKkKyg8qZ9isQSgqqbmWq5nMy1hEipSv5JL7ZN7SvAegkUiLTBL2qGFhvNUqcFqFTaiZx53QUwD?cluster=devnet) |
 
 ---
 
@@ -329,8 +357,9 @@ difference is demonstrable on chain rather than asserted here.
 its tier, ADV, volume window, breach count and pause. A separate `HaltState` per symbol is written by
 the halt publisher alone, keeping write authority split from the venue operator.
 
-**The pool signs.** `check_and_record` takes the pool as a `Signer`, so a tape entry cannot be forged
-on another pool's behalf.
+**The pool signs, and must be approved.** `check_and_record` takes the pool as a `Signer` and
+requires an `ApprovedPool` account the venue created for it, so neither a stranger's key nor a
+different pool can write a tape entry or consume the cap.
 
 ---
 
@@ -374,6 +403,16 @@ Stated plainly, because a compliance tool that overstates itself is worse than n
 - **The order aggregates volume caps across affiliated venues.** This implementation enforces one
   venue's own volume.
 - **Devnet only.** Not audited, and not deployed to mainnet.
+- **xStocks are not covered by this order.** They are tracker certificates without shareholder
+  rights, sold outside the US. Breaker uses them as live data, not as a compliance claim.
+- **The halt source is the issuer's flag, not the listing exchange's.** The order refers to a halt
+  on the primary listing exchange. The publisher mirrors xStocks' `isTradingHalted`, which may not
+  match it exactly; a production venue would publish from an exchange halt feed.
+- **Coverage is not enforcement.** The site shows the issuer's status for all 1,124 xStocks tokens.
+  The test venue lists and publishes halts for four.
+- **Dollar stablecoin quotes only.** A quote asset priced through Pyth can be registered, but
+  pricing it is not implemented, so trades against one are refused rather than recorded at a guessed
+  dollar value.
 - **Breaker covers three conditions of the order, not all of them.** Permissioned access, issuer
   objection rights, published venue contracts, participant notices, OFAC and recordkeeping are the
   venue's to meet.
