@@ -297,6 +297,9 @@ export default function App() {
               <a href={ORDER_URL} target="_blank" rel="noreferrer">
                 The SEC order
               </a>
+              <a href="https://x.com/breakersec" target="_blank" rel="noreferrer">
+                @breakersec on X
+              </a>
             </nav>
           </div>
           <div className="site-footer-bar">

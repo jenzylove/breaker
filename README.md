@@ -15,6 +15,7 @@
   <a href="https://github.com/jenzylove/breaker/actions/workflows/verify.yml"><img src="https://github.com/jenzylove/breaker/actions/workflows/verify.yml/badge.svg" alt="Tests"></a>
   <a href="https://github.com/jenzylove/breaker/actions/workflows/halt-publisher.yml"><img src="https://github.com/jenzylove/breaker/actions/workflows/halt-publisher.yml/badge.svg" alt="Halt publisher"></a>
   <a href="https://hackathons.solana.com/hackathons/stocklana"><img src="https://img.shields.io/badge/built%20for-Stocklana-14F195" alt="Built for Stocklana"></a>
+  <a href="https://x.com/breakersec"><img src="https://img.shields.io/badge/X-@breakersec-111111?logo=x" alt="@breakersec on X"></a>
 </p>
 
 <p align="center">
@@ -83,22 +84,18 @@ sequenceDiagram
     end
 ```
 
-Where each input comes from, and who can write it:
+Where the inputs come from, and where each trade ends up:
 
 ```mermaid
 flowchart LR
-    REG[xStocks issuer registry<br/>isTradingHalted per stock] -->|every 5 min| PUB[Halt publisher<br/>api/heartbeat.ts]
-    PUB -->|set_halt| HS[(HaltState accounts)]
-    ADV[ADV publisher] -->|update_adv| SYM[(Symbol accounts)]
-    OP[Venue operator] -->|initialize_venue, list_symbol| SYM
-    subgraph SOL[Solana]
-      POOL[Venue pool] -->|CPI check_and_record| BRK[Breaker program]
-      BRK --> HS
-      BRK --> SYM
-      BRK -->|TradeRecorded events| LOGS[(Transaction logs)]
-    end
-    LOGS --> TAPE[Public record<br/>api/tape.ts]
-    REG --> COV[Coverage<br/>api/stocks.ts]
+    REG["xStocks issuer registry"] -->|"halt flag, every 5 min"| PUB["Halt publisher"]
+    PUB -->|set_halt| HS[("HaltState")]
+    SYM[("Symbol<br/>limit and volume")]
+    POOL["Any venue's swap"] -->|"CPI, before settling"| BRK["Breaker"]
+    HS --> BRK
+    SYM --> BRK
+    BRK -->|"clear: TradeRecorded"| REC["Public record"]
+    BRK -->|"halted, stale or over the limit"| REV["Whole trade reverts"]
 ```
 
 The halt publisher, the ADV publisher and the operator are separate roles named when the venue is
